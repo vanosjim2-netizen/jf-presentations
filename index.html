@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jf.presentations</title>
+<script>
+(function(){var p=localStorage.getItem('jf-theme')||'auto';var d=p==='dark'||(p==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f4f6;--panel:#fff;--line:#e3e3e8;--hover:#ececf1;--text:#16161a;--muted:#6b6b76;--accent:#e8a200;--abtn:#fab005;--onacc:#1a1a1a;--tint:rgba(250,176,5,.18);--stage:#e4e4ea;--shadow:0 1px 4px rgba(0,0,0,.1);--danger:#e03131}
+[data-theme=dark]{--bg:#0f0f10;--panel:#18181b;--line:#2a2a2e;--hover:#222226;--text:#f4f4f5;--muted:#9a9aa3;--accent:#fcc419;--abtn:#fcc419;--tint:rgba(252,196,25,.15);--stage:#0b0b0c;--shadow:none;--danger:#ff6b6b}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button,select,input,textarea{font:inherit}
+button,select{cursor:pointer}
+.hidden{display:none!important}
+.boot{height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:600;color:var(--text);text-decoration:none}
+.logo{display:flex}.logo svg{width:36px;height:36px}
+.dot{color:var(--accent)}
+.badge{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--tint);color:var(--accent);white-space:nowrap}
+.badge.off{background:rgba(224,49,49,.15);color:var(--danger)}
+#auth{height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative}
+#auth .themeBtn{position:absolute;top:16px;right:16px}
+.auth-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.sub{color:var(--muted);font-size:14px;margin-top:6px}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px;margin:24px 0 16px}
+.tabs button{flex:1;padding:8px;border:0;border-radius:8px;background:transparent;color:var(--muted)}
+.tabs button.active{background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.inp{width:100%;padding:8px 11px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text)}
+.inp:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{padding:9px 14px;border:0;border-radius:8px;background:var(--abtn);color:var(--onacc);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{filter:brightness(1.05)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.sec{background:var(--hover);color:var(--text);font-weight:500}
+.full{width:100%;justify-content:center}
+.link{background:none;border:0;color:var(--muted);font-size:13px;margin-top:12px;text-decoration:underline}
+.msg{font-size:13px;margin-top:12px;min-height:18px}
+.msg.err{color:var(--danger)}.msg.ok{color:#2f9e44}
+#app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+header .brand{font-size:18px}
+header .logo svg{width:28px;height:28px}
+.spacer{flex:1}
+#status{font-size:13px;color:var(--muted);white-space:nowrap}
+.icon-btn{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 10px;font-size:13px;white-space:nowrap}
+.icon-btn:hover{background:var(--hover)}
+.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.icon-btn.on{border-color:var(--accent);color:var(--accent)}
+.menu{position:relative}
+.menu summary{list-style:none}
+.menu summary::-webkit-details-marker{display:none}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:220px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.menu-pop.left{right:auto;left:0}
+.menu-pop button,.menu-pop a{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--text);padding:8px 10px;border-radius:6px;font-size:14px;text-decoration:none}
+.menu-pop button:hover,.menu-pop a:hover{background:var(--hover)}
+.menu-pop .info{padding:8px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+.menu-pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.menu-pop kbd{margin-left:auto}
+.swatch{width:18px;height:18px;border-radius:4px;border:1px solid var(--line);flex:0 0 auto}
+.main{display:grid;grid-template-columns:230px 1fr;min-height:0;position:relative}
+body.side-hidden .main{grid-template-columns:0 1fr}
+body.side-hidden aside{display:none}
+aside{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;padding:12px;gap:8px}
+.side-row{display:flex;gap:6px}
+.side-row .inp{flex:1;min-width:0}
+#sortSel{flex:0 0 auto;width:auto;padding:8px 4px;font-size:13px}
+#list{list-style:none;overflow-y:auto;flex:1;margin-top:4px}
+#list li{padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px}
+#list li:hover{background:var(--hover)}
+#list li.active{background:var(--tint)}
+#list .t{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#list .d{font-size:12px;color:var(--muted);margin-top:2px}
+#list .acts{display:flex;gap:6px;margin-top:6px}
+#list .acts button{font-size:12px;padding:3px 8px}
+.list-head{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px 4px}
+.empty-list{color:var(--muted);font-size:13px;padding:10px}
+.side-foot{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.side-foot button{text-align:left}
+.work{display:flex;flex-direction:column;min-height:0;min-width:0}
+#presView{display:flex;flex-direction:column;min-height:0;flex:1}
+.doc-head{display:flex;align-items:center;gap:6px;padding:7px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--panel)}
+#title{flex:1;min-width:150px;background:transparent;border:0;color:var(--text);font-size:19px;font-weight:600;padding:4px 6px;border-radius:6px}
+#title:focus{outline:1px solid var(--line)}
+#pinBtn{font-size:16px;padding:2px 9px}
+#pinBtn.on{color:#f59f00;border-color:#f59f00}
+.toolbar{display:flex;flex-wrap:wrap;gap:2px;padding:5px 14px;border-bottom:1px solid var(--line);align-items:center;background:var(--panel);min-height:41px}
+.toolbar>button,.toolbar select,.toolbar summary,.tgroup>button,.tgroup select{background:transparent;border:1px solid transparent;color:var(--text);border-radius:6px;padding:3px 8px;min-width:30px;font-size:13px;height:29px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.toolbar>button:hover,.toolbar summary:hover,.tgroup>button:hover{background:var(--hover);border-color:var(--line)}
+.toolbar button.on{background:var(--tint);border-color:var(--accent)}
+.toolbar select{border-color:var(--line);background:var(--bg)}
+.tgroup{display:inline-flex;align-items:center;gap:2px}
+.toolbar label{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--muted);padding:0 4px}
+.toolbar input[type=color]{width:24px;height:24px;border:0;background:none;cursor:pointer;padding:0}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.editor{flex:1;display:grid;grid-template-columns:196px 1fr;min-height:0}
+#thumbsCol{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:12px 10px 20px}
+.thumb{position:relative;display:flex;gap:6px;margin-bottom:12px;cursor:pointer}
+.thumb .num{font-size:12px;color:var(--muted);width:16px;text-align:right;padding-top:2px;flex:0 0 auto}
+.thumb .mini{width:150px;height:84px;position:relative;overflow:hidden;border-radius:4px;outline:2px solid var(--line);flex:0 0 auto;background:#fff}
+.thumb.active .mini{outline:3px solid var(--accent)}
+.thumb:hover .mini{outline-color:var(--muted)}
+.thumb.active:hover .mini{outline-color:var(--accent)}
+.thumb .mini .sl{transform:scale(.1171875);transform-origin:0 0;position:absolute;left:0;top:0;pointer-events:none}
+.thumb.drop::before{content:'';position:absolute;top:-8px;left:22px;width:150px;height:3px;border-radius:2px;background:var(--accent)}
+.thumb .tacts{position:absolute;right:4px;bottom:4px;display:none;gap:3px}
+.thumb:hover .tacts{display:flex}
+.thumb .tacts button{background:rgba(0,0,0,.65);color:#fff;border:0;border-radius:4px;font-size:11px;padding:2px 5px}
+.thumb .nflag{position:absolute;left:28px;bottom:4px;font-size:10px;background:rgba(0,0,0,.6);color:#fff;border-radius:3px;padding:0 4px}
+#addSlideBtn{width:150px;margin-left:22px;justify-content:center}
+.stage-col{display:flex;flex-direction:column;min-height:0;min-width:0}
+#stageWrap{flex:1;position:relative;overflow:hidden;background:var(--stage);display:flex;align-items:center;justify-content:center}
+#slideHolder{position:relative;box-shadow:0 4px 24px rgba(0,0,0,.18)}
+#slideHolder>.sl{position:absolute;left:0;top:0;transform-origin:0 0}
+#notes{height:86px;border:0;border-top:1px solid var(--line);background:var(--panel);color:var(--text);padding:10px 14px;resize:none;outline:none;font-size:14px}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);padding:20px;text-align:center}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal.wide{max-width:760px}
+.modal h2{font-size:18px;margin-bottom:12px}
+.modal h3{font-size:14px;margin:14px 0 8px}
+.modal p{color:var(--muted);font-size:14px;margin-bottom:12px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+.pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pick-grid button{background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px;text-align:left;color:var(--text)}
+.pick-grid button:hover{border-color:var(--muted)}
+.pick-grid button.on{border-color:var(--accent)}
+.pick-grid b{display:block;font-size:14px}
+.pick-grid span{font-size:12px;color:var(--muted)}
+.tprev{height:54px;border-radius:6px;margin-bottom:8px;position:relative;overflow:hidden;border:1px solid rgba(0,0,0,.1)}
+.tprev i{position:absolute;left:10px;top:12px;width:60%;height:9px;border-radius:3px}
+.tprev u{position:absolute;left:10px;top:28px;width:24px;height:4px;border-radius:2px}
+.tprev s{position:absolute;left:10px;top:38px;width:45%;height:5px;border-radius:2px;opacity:.5}
+.keys{width:100%;border-collapse:collapse;font-size:13px}
+.keys td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+kbd,code{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px}
+.copy-row{display:flex;gap:6px}
+textarea.inp{min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:13px;resize:vertical}
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:200}
+body.ro aside,body.ro .toolbar,body.ro .edit-only,body.ro #notes,body.ro .tacts{display:none!important}
+body.ro .main{grid-template-columns:1fr}
+@media(max-width:820px){
+.main{grid-template-columns:1fr}
+aside{position:absolute;top:0;bottom:0;left:0;width:270px;z-index:30;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 30px rgba(0,0,0,.3)}
+body.side-open aside{transform:none}
+body.side-hidden aside{display:flex}
+.editor{grid-template-columns:1fr}
+#thumbsCol{display:none}
+#status,.hide-m{display:none}
+}
+/* present */
+#present{position:fixed;inset:0;background:#000;z-index:150;display:flex;align-items:center;justify-content:center;cursor:none;user-select:none}
+#present.cursor{cursor:default}
+#presHolder{position:relative}
+#presHolder>.sl{position:absolute;left:0;top:0;transform-origin:0 0}
+.an-fade{animation:pfade .45s ease}
+.an-slide{animation:pslide .45s ease}
+.an-zoom{animation:pzoom .45s ease}
+@keyframes pfade{from{opacity:0}to{opacity:1}}
+@keyframes pslide{from{opacity:0;transform:translateX(70px)}to{opacity:1;transform:none}}
+@keyframes pzoom{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+#presBar{position:fixed;bottom:18px;right:20px;display:flex;gap:6px;align-items:center;opacity:0;transition:opacity .3s}
+#present.cursor #presBar{opacity:1}
+#presBar button,#presBar span{background:rgba(30,30,30,.8);color:#fff;border:0;border-radius:8px;padding:7px 12px;font-size:13px}
+#presEnd{color:#999;font-size:22px;text-align:center}
+#presBlack{position:fixed;inset:0;background:#000;z-index:5}
+#printArea{display:none}
+@media print{
+@page{size:1280px 720px;margin:0}
+html,body{height:auto;overflow:visible;background:#fff}
+body>*:not(#printArea){display:none!important}
+#printArea{display:block}
+.print-slide{width:1280px;height:720px;overflow:hidden;page-break-after:always;break-after:page}
+}
+</style>
+<style id="slideCss">
+.sl{position:relative;width:1280px;height:720px;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sl .el{position:absolute;box-sizing:border-box}
+.sl .txt{width:100%;height:100%;padding:8px 12px;line-height:1.25;outline:none;overflow-wrap:break-word;box-sizing:border-box}
+.sl .txt p,.sl .txt div{margin:0}
+.sl .txt ul,.sl .txt ol{padding-left:1.15em;margin:0}
+.sl .txt li{margin:.25em 0}
+.sl .txt li::marker{color:var(--acc)}
+.sl .txt a{color:var(--acc)}
+.sl .el svg{width:100%;height:100%;display:block;overflow:visible}
+.sl .el img{width:100%;height:100%;display:block;pointer-events:none}
+.sl .img-ph{width:100%;height:100%;border:3px dashed currentColor;opacity:.45;display:flex;align-items:center;justify-content:center;font-size:24px;text-align:center;padding:20px;box-sizing:border-box;border-radius:8px}
+.sl:not(.ph-on) .img-ph{visibility:hidden}
+.sl .el table{width:100%;height:100%;border-collapse:collapse;table-layout:fixed}
+.sl .el td,.sl .el th{border:2px solid var(--tb);padding:6px 12px;text-align:left;vertical-align:middle;outline:none;overflow:hidden;overflow-wrap:break-word}
+.sl.ph-on .el.empty .txt::after{content:attr(data-ph);position:absolute;left:12px;top:8px;right:12px;opacity:.4;pointer-events:none}
+.sl.ph-on .el:not(.editing){cursor:move}
+.sl.ph-on .el.editing .txt,.sl.ph-on .el.editing td,.sl.ph-on .el.editing th{cursor:text}
+.sl .selbox{position:absolute;border:calc(2px / var(--s)) solid #1c7ed6;pointer-events:none;z-index:9000;box-sizing:border-box}
+.sl .hdl{position:absolute;width:calc(13px / var(--s));height:calc(13px / var(--s));background:#fff;border:calc(2px / var(--s)) solid #1c7ed6;border-radius:3px;pointer-events:auto;transform:translate(-50%,-50%);box-sizing:border-box}
+.sl .hdl.rot{border-radius:50%;top:calc(-30px / var(--s))!important;left:50%;cursor:grab}
+.sl .guide{position:absolute;background:#e64980;z-index:8999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="boot" id="boot">Laden...</div>
+
+<div id="auth" class="hidden">
+  <button class="icon-btn themeBtn"></button>
+  <div class="auth-card">
+    <div class="brand">
+      <span class="logo" id="logoSrc"><svg viewBox="190 105 300 300"><rect x="194" y="109" width="292" height="292" rx="64" fill="#111" stroke="#2a2a2e" stroke-width="8"/><rect x="220" y="150" width="240" height="140" rx="10" fill="#fff"/><path d="M220 160q0-10 10-10h220q10 0 10 10v4h-240z" fill="#fab005"/><text x="238" y="212" font-size="40" font-weight="700" font-family="system-ui,sans-serif" fill="#111">jf<tspan fill="#f59f00">.</tspan></text><rect x="238" y="230" width="90" height="8" rx="4" fill="#fab005"/><rect x="238" y="248" width="70" height="8" rx="4" fill="#ffe8a3"/><rect x="238" y="266" width="80" height="8" rx="4" fill="#ffe8a3"/><rect x="372" y="242" width="16" height="34" rx="3" fill="#ffe066"/><rect x="394" y="222" width="16" height="54" rx="3" fill="#fcc419"/><rect x="416" y="200" width="16" height="76" rx="3" fill="#f59f00"/><rect x="220" y="314" width="66" height="40" rx="6" fill="#3a3a40"/><rect x="307" y="314" width="66" height="40" rx="6" fill="#fff" stroke="#fab005" stroke-width="4"/><rect x="316" y="322" width="30" height="5" rx="2.5" fill="#fab005"/><rect x="394" y="314" width="66" height="40" rx="6" fill="#3a3a40"/></svg></span>
+      <span>jf<span class="dot">.</span>presentations</span>
+    </div>
+    <p class="sub">Presenteren, simpel gemaakt. Eén account voor alle jf.tools.</p>
+    <div class="tabs">
+      <button type="button" data-mode="login" class="active">Inloggen</button>
+      <button type="button" data-mode="register">Registreren</button>
+    </div>
+    <form id="authForm">
+      <label class="field"><span>E-mail</span><input class="inp" type="email" id="email" required autocomplete="email"></label>
+      <label class="field"><span>Wachtwoord</span><input class="inp" type="password" id="password" required autocomplete="current-password"></label>
+      <button class="btn full" id="authSubmit" type="submit">Inloggen</button>
+    </form>
+    <button class="link" id="forgot" type="button">Wachtwoord vergeten?</button>
+    <div class="msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <button class="icon-btn edit-only" id="menuBtn" title="Presentaties tonen/verbergen">&#9776;</button>
+    <a class="brand" href="./"><span class="logo"></span><span>jf<span class="dot">.</span>presentations</span></a>
+    <details class="menu">
+      <summary class="icon-btn">Apps &#9662;</summary>
+      <div class="menu-pop left">
+        <a href="../jf-pages/">&#128196; jf.pages &mdash; documenten</a>
+        <a href="../jf-cells/">&#128202; jf.cells &mdash; spreadsheets</a>
+        <a href="../jf-presentations/">&#127908; jf.presentations &mdash; presentaties</a>
+      </div>
+    </details>
+    <span id="status"></span>
+    <span id="offline" class="badge off hidden">Offline</span>
+    <span id="roBadge" class="badge hidden">Alleen bekijken</span>
+    <div class="spacer"></div>
+    <button class="icon-btn themeBtn"></button>
+    <a class="btn hidden" id="ownLink" href="./">Zelf presenteren</a>
+    <details class="menu edit-only" id="userMenu">
+      <summary class="icon-btn">&#9881; Account</summary>
+      <div class="menu-pop">
+        <div class="info" id="userEmail"></div>
+        <button id="pwBtn">Wachtwoord wijzigen</button>
+        <button id="helpBtn">Sneltoetsen</button>
+        <button id="logout">Uitloggen</button>
+      </div>
+    </details>
+  </header>
+  <div class="main">
+    <aside id="sidebar">
+      <button class="btn full" id="newBtn">+ Nieuwe presentatie</button>
+      <div class="side-row">
+        <input class="inp" id="search" placeholder="Zoeken...">
+        <select class="inp" id="sortSel" title="Sorteren">
+          <option value="updated">Laatst bewerkt</option>
+          <option value="created">Nieuwste</option>
+          <option value="name">Naam A-Z</option>
+        </select>
+      </div>
+      <ul id="list"></ul>
+      <div class="side-foot">
+        <button class="icon-btn" id="trashBtn">Prullenbak</button>
+        <button class="icon-btn danger hidden" id="emptyTrash">Prullenbak legen</button>
+      </div>
+    </aside>
+    <section class="work">
+      <div class="empty-state hidden" id="emptyState">
+        <p id="emptyText">Geen presentatie geopend.</p>
+        <button class="btn edit-only" id="emptyNew">+ Nieuwe presentatie</button>
+      </div>
+      <div id="presView" class="hidden">
+        <div class="doc-head">
+          <button class="icon-btn edit-only" id="pinBtn" title="Favoriet">&#9734;</button>
+          <input id="title" placeholder="Naamloze presentatie" maxlength="120">
+          <details class="menu">
+            <summary class="btn">&#9654; Presenteren &#9662;</summary>
+            <div class="menu-pop">
+              <button id="playStart">&#9654; Vanaf het begin <kbd>F5</kbd></button>
+              <button id="playCur">&#9654; Vanaf deze dia <kbd>Shift+F5</kbd></button>
+              <button id="playSpeaker">&#127908; Met sprekersweergave</button>
+            </div>
+          </details>
+          <button class="icon-btn edit-only" id="shareBtn">Delen</button>
+          <details class="menu">
+            <summary class="icon-btn">Exporteren &#9662;</summary>
+            <div class="menu-pop">
+              <button id="expPptx">PowerPoint (.pptx)</button>
+              <button id="expPdf">PDF / printen</button>
+            </div>
+          </details>
+          <button class="icon-btn danger edit-only" id="deleteBtn" title="Naar prullenbak">&#128465;</button>
+        </div>
+        <div class="toolbar">
+          <button data-act="undo" title="Ongedaan maken (Ctrl+Z)">&#8630;</button>
+          <button data-act="redo" title="Opnieuw (Ctrl+Y)">&#8631;</button>
+          <span class="sep"></span>
+          <details class="menu">
+            <summary title="Nieuwe dia (Ctrl+M)">&#10133; Dia &#9662;</summary>
+            <div class="menu-pop left" id="layoutMenu"></div>
+          </details>
+          <button data-act="addText" title="Tekstvak">&#120035; Tekst</button>
+          <details class="menu">
+            <summary title="Vorm">&#9711; Vorm &#9662;</summary>
+            <div class="menu-pop left">
+              <button data-shape="rect">&#9645; Rechthoek</button>
+              <button data-shape="round">&#9634; Afgeronde rechthoek</button>
+              <button data-shape="ellipse">&#9711; Ovaal</button>
+              <button data-shape="triangle">&#9651; Driehoek</button>
+              <button data-shape="arrow">&#10132; Pijl</button>
+              <button data-shape="star">&#9734; Ster</button>
+              <button data-shape="line">&#9472; Lijn</button>
+            </div>
+          </details>
+          <details class="menu">
+            <summary title="Afbeelding">&#128444; Afbeelding &#9662;</summary>
+            <div class="menu-pop left">
+              <button data-act="imgUpload">&#8679; Uploaden van je computer</button>
+              <button data-act="imgUrl">&#128279; Via een link</button>
+            </div>
+          </details>
+          <button data-act="addTable" title="Tabel">&#9638; Tabel</button>
+          <button data-act="addChart" title="Grafiek">&#128202; Grafiek</button>
+          <span class="sep"></span>
+          <span class="tgroup hidden" id="tbText">
+            <select id="fontSel" title="Lettertype">
+              <option value="">Thema-lettertype</option>
+              <option value="system-ui,sans-serif">Modern</option>
+              <option value="Arial,sans-serif">Arial</option>
+              <option value="Verdana,sans-serif">Verdana</option>
+              <option value="Georgia,serif">Georgia</option>
+              <option value="'Times New Roman',serif">Times</option>
+              <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+              <option value="Impact,sans-serif">Impact</option>
+              <option value="'Courier New',monospace">Courier</option>
+              <option value="'Comic Sans MS',cursive">Comic Sans</option>
+            </select>
+            <select id="sizeSel" title="Lettergrootte"></select>
+            <button data-act="bold" title="Vet (Ctrl+B)"><b>B</b></button>
+            <button data-act="italic" title="Cursief (Ctrl+I)"><i>I</i></button>
+            <button data-act="underline" title="Onderstrepen (Ctrl+U)"><u>U</u></button>
+            <label title="Tekstkleur">A<input type="color" id="colorPick" value="#e8590c"></label>
+            <button data-act="bullets" title="Opsomming">&bull;&#8801;</button>
+            <button data-act="numbers" title="Nummering">1.&#8801;</button>
+            <button data-act="alL" title="Links">&#8676;</button>
+            <button data-act="alC" title="Midden">&#8596;</button>
+            <button data-act="alR" title="Rechts">&#8677;</button>
+            <label title="Achtergrond van tekstvak">&#9638;<input type="color" id="boxFill" value="#fff3bf"></label>
+            <span class="sep"></span>
+          </span>
+          <span class="tgroup hidden" id="tbShape">
+            <label title="Opvulkleur">Vulling<input type="color" id="fillPick" value="#fab005"></label>
+            <label title="Randkleur">Rand<input type="color" id="strokePick" value="#1a1a1a"></label>
+            <select id="strokeW" title="Randdikte"><option value="0">Geen rand</option><option value="2">Dun</option><option value="5">Normaal</option><option value="10">Dik</option></select>
+            <button data-act="noFill" title="Geen vulling">&#8856; Vulling</button>
+            <span class="sep"></span>
+          </span>
+          <span class="tgroup hidden" id="tbImage">
+            <button data-act="imgReplace">&#8635; Vervangen</button>
+            <button data-act="imgFit" id="imgFitBtn">Passend maken</button>
+            <span class="sep"></span>
+          </span>
+          <span class="tgroup hidden" id="tbTable">
+            <button data-act="rowAdd">+ Rij</button>
+            <button data-act="colAdd">+ Kolom</button>
+            <button data-act="rowDel">&minus; Rij</button>
+            <button data-act="colDel">&minus; Kolom</button>
+            <button data-act="tblHead" id="tblHeadBtn">Kopregel</button>
+            <span class="sep"></span>
+          </span>
+          <span class="tgroup hidden" id="tbChart">
+            <button data-act="chartEdit">&#9998; Gegevens</button>
+            <span class="sep"></span>
+          </span>
+          <span class="tgroup hidden" id="tbArrange">
+            <button data-act="front" title="Naar voren">&#11014; Voor</button>
+            <button data-act="back" title="Naar achteren">&#11015; Achter</button>
+            <button data-act="dupEl" title="Dupliceren (Ctrl+D)">&#10697;</button>
+            <button data-act="delEl" title="Verwijderen (Delete)">&#128465;</button>
+            <span class="sep"></span>
+          </span>
+          <span class="spacer"></span>
+          <details class="menu">
+            <summary title="Thema">&#127912; Thema &#9662;</summary>
+            <div class="menu-pop" id="themeMenu"></div>
+          </details>
+          <label title="Achtergrond van deze dia">Achtergrond<input type="color" id="bgPick" value="#ffffff"></label>
+          <button data-act="bgReset" title="Thema-achtergrond terug">&#8634;</button>
+          <select id="transSel" title="Overgang naar deze dia">
+            <option value="none">Geen overgang</option>
+            <option value="fade">Vervagen</option>
+            <option value="slide">Schuiven</option>
+            <option value="zoom">Inzoomen</option>
+          </select>
+        </div>
+        <div class="editor">
+          <div id="thumbsCol">
+            <div id="thumbs"></div>
+            <button class="btn sec edit-only" id="addSlideBtn">+ Nieuwe dia</button>
+          </div>
+          <div class="stage-col">
+            <div id="stageWrap"><div id="slideHolder"></div></div>
+            <textarea id="notes" placeholder="Notities voor de spreker (alleen jij ziet deze in de sprekersweergave)..."></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="tplModal">
+  <div class="modal wide">
+    <h2>Nieuwe presentatie</h2>
+    <h3>1. Kies een thema</h3>
+    <div class="pick-grid" id="themePick"></div>
+    <h3>2. Kies een sjabloon</h3>
+    <div class="pick-grid" id="tplPick">
+      <button data-tpl="leeg" class="on"><b>Leeg</b><span>Alleen een titeldia</span></button>
+      <button data-tpl="spreekbeurt"><b>Spreekbeurt</b><span>Inleiding, 3 onderwerpen, conclusie, vragen</span></button>
+      <button data-tpl="project"><b>Projectpresentatie</b><span>Doel, aanpak, planning, resultaat</span></button>
+    </div>
+    <div class="modal-foot"><button class="btn sec" data-close>Annuleren</button><button class="btn" id="createBtn">Maken</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="shareModal">
+  <div class="modal">
+    <h2>Presentatie delen</h2>
+    <p>Met een openbare link kan iedereen deze presentatie bekijken en afspelen, maar niet bewerken.</p>
+    <label class="check"><input type="checkbox" id="publicChk"> Iedereen met de link kan bekijken</label>
+    <div class="copy-row" id="shareRow">
+      <input class="inp" id="shareLink" readonly>
+      <button class="btn" id="copyLink">Kopieer</button>
+    </div>
+    <div class="modal-foot"><button class="btn sec" data-close>Klaar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="chartModal">
+  <div class="modal">
+    <h2>Grafiek</h2>
+    <label class="field"><span>Soort grafiek</span>
+      <select class="inp" id="chartKind"><option value="bar">Staafdiagram</option><option value="line">Lijndiagram</option><option value="pie">Taartdiagram</option></select>
+    </label>
+    <label class="field"><span>Gegevens: per regel een naam en een getal, gescheiden door ; (bijv. <code>Maandag;12</code>)</span>
+      <textarea class="inp" id="chartData"></textarea>
+    </label>
+    <div class="modal-foot"><button class="btn sec" data-close>Annuleren</button><button class="btn" id="chartSave">Opslaan</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="helpModal">
+  <div class="modal wide">
+    <h2>Sneltoetsen</h2>
+    <table class="keys">
+      <tr><td>Presenteren vanaf begin / deze dia</td><td><kbd>F5</kbd> / <kbd>Shift</kbd>+<kbd>F5</kbd></td></tr>
+      <tr><td>Tijdens presenteren</td><td><kbd>&rarr;</kbd> <kbd>Spatie</kbd> volgende, <kbd>&larr;</kbd> vorige, <kbd>B</kbd> zwart scherm, <kbd>Esc</kbd> stoppen</td></tr>
+      <tr><td>Nieuwe dia</td><td><kbd>Ctrl</kbd>+<kbd>M</kbd></td></tr>
+      <tr><td>Tekst bewerken</td><td>Dubbelklik op een tekstvak</td></tr>
+      <tr><td>Verplaatsen</td><td>Slepen, of pijltjes (<kbd>Shift</kbd> = 10 stappen)</td></tr>
+      <tr><td>Draaien</td><td>Rond bolletje boven een element slepen (<kbd>Shift</kbd> = per 15&deg;)</td></tr>
+      <tr><td>Kopi&euml;ren / plakken / dupliceren</td><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd></td></tr>
+      <tr><td>Verwijderen</td><td><kbd>Delete</kbd> (element) &mdash; of het prullenbakje bij een dia</td></tr>
+      <tr><td>Ongedaan / opnieuw</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td></tr>
+      <tr><td>Vorige / volgende dia</td><td><kbd>Page Up</kbd> / <kbd>Page Down</kbd></td></tr>
+      <tr><td>Opslaan</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd> (gaat ook automatisch)</td></tr>
+      <tr><td>Nieuwe presentatie</td><td><kbd>Alt</kbd>+<kbd>N</kbd></td></tr>
+    </table>
+    <div class="modal-foot"><button class="btn sec" data-close>Sluiten</button></div>
+  </div>
+</div>
+
+<div id="present" class="hidden">
+  <div id="presHolder"></div>
+  <div id="presEnd" class="hidden">Einde van de presentatie<br><small>Klik of druk op Esc om af te sluiten</small></div>
+  <div id="presBlack" class="hidden"></div>
+  <div id="presBar">
+    <button id="pPrev">&#8592;</button>
+    <span id="pCount">1 / 1</span>
+    <button id="pNext">&#8594;</button>
+    <button id="pExit">&#10005; Stoppen</button>
+  </div>
+</div>
+
+<input type="file" id="imgFile" accept="image/*" hidden>
+<div id="printArea"></div>
+
+<script>
+const SUPABASE_URL = 'https://azzhruqhvmxqwsyatlju.supabase.co';
+let SUPABASE_KEY = 'PLAK_HIER_JE_ANON_KEY';
+const PPTX_URL = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+const W = 1280, H = 720;
+
+const $ = id => document.getElementById(id);
+const FIELDS = 'id,title,updated_at,created_at,pinned,deleted_at,is_public';
+let sb = null, items = [], currentId = null, currentUser, saveTimer = null, dirty = false, mode = 'login', view = 'list';
+let pres = null, cur = 0, selId = null, editId = null, scale = 1, readOnly = false;
+let undoStack = [], redoStack = [], clipEl = null, thumbTimer = null;
+
+document.querySelectorAll('header .logo').forEach(l => l.innerHTML = $('logoSrc').innerHTML);
+
+function setMsg(t, type) { const m = $('authMsg'); m.textContent = t; m.className = 'msg ' + (type || 'err'); }
+function setStatus(t) { $('status').textContent = t; }
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2200); }
+function curItem() { return items.find(d => d.id === currentId); }
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function clean(h) { return window.DOMPurify ? DOMPurify.sanitize(h || '') : (h || ''); }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+const loaded = {};
+function loadScript(src) { if (!loaded[src]) loaded[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete loaded[src]; rej(new Error('Laden mislukt')); }; document.head.append(s); }); return loaded[src]; }
+
+/* ---------- App-thema (licht/donker) ---------- */
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme() {
+  const p = localStorage.getItem('jf-theme') || 'auto';
+  const dark = p === 'dark' || (p === 'auto' && mq.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const label = p === 'auto' ? '\u25D0 Auto' : p === 'light' ? '\u2600 Licht' : '\u263E Donker';
+  document.querySelectorAll('.themeBtn').forEach(b => { b.textContent = label; b.title = 'Thema wisselen (Auto volgt je Chrome-instelling)'; });
+}
+document.querySelectorAll('.themeBtn').forEach(b => b.onclick = () => {
+  const p = localStorage.getItem('jf-theme') || 'auto';
+  const next = p === 'auto' ? 'light' : p === 'light' ? 'dark' : 'auto';
+  localStorage.setItem('jf-theme', next); applyTheme();
+  toast(next === 'auto' ? 'Thema volgt nu je Chrome-instelling' : next === 'light' ? 'Licht thema' : 'Donker thema');
+});
+mq.addEventListener('change', applyTheme);
+window.addEventListener('storage', e => { if (e.key === 'jf-theme') applyTheme(); });
+applyTheme();
+
+/* ---------- Menu's en modals ---------- */
+document.addEventListener('click', e => { document.querySelectorAll('details.menu[open]').forEach(d => { if (!d.contains(e.target)) d.removeAttribute('open'); }); });
+document.addEventListener('click', e => { const b = e.target.closest('.menu-pop button'); if (b) { const d = b.closest('details'); if (d) d.removeAttribute('open'); } });
+function openModal(id) { $(id).classList.remove('hidden'); }
+function closeModals() { document.querySelectorAll('.modal-bg').forEach(m => m.classList.add('hidden')); }
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); }));
+$('menuBtn').onclick = () => { if (window.innerWidth <= 820) document.body.classList.toggle('side-open'); else { document.body.classList.toggle('side-hidden'); localStorage.setItem('jf-pres-side', document.body.classList.contains('side-hidden') ? '0' : '1'); setTimeout(fitStage, 0); } };
+if (localStorage.getItem('jf-pres-side') === '0') document.body.classList.add('side-hidden');
+
+/* ---------- Opstarten (zelfde Supabase als jf.pages) ---------- */
+async function getKey() {
+  if (SUPABASE_KEY.indexOf('PLAK_HIER') !== 0) return SUPABASE_KEY;
+  try {
+    const r = await fetch('../jf-pages/index.html', { cache: 'no-store' });
+    const t = await r.text();
+    const m = t.match(/const SUPABASE_KEY = '([^']+)'/);
+    if (m && m[1].indexOf('PLAK_HIER') !== 0) { localStorage.setItem('jf-sb-key', m[1]); return m[1]; }
+  } catch (e) {}
+  return localStorage.getItem('jf-sb-key');
+}
+async function init() {
+  const key = await getKey();
+  $('boot').classList.add('hidden');
+  if (!key) { $('auth').classList.remove('hidden'); setMsg('Kon de Supabase-key niet vinden.'); $('authSubmit').disabled = true; return; }
+  sb = supabase.createClient(SUPABASE_URL, key);
+  const viewId = new URLSearchParams(location.search).get('view');
+  if (viewId) return showViewer(viewId);
+  sb.auth.onAuthStateChange((event, session) => setTimeout(() => { if (event === 'PASSWORD_RECOVERY') changePassword(); render(session); }, 0));
+}
+
+/* ---------- Account ---------- */
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
+  $('authSubmit').textContent = mode === 'login' ? 'Inloggen' : 'Account maken';
+  $('password').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+  setMsg('');
+});
+function vertaalFout(m) {
+  if (/invalid login/i.test(m)) return 'E-mail of wachtwoord klopt niet.';
+  if (/already registered/i.test(m)) return 'Dit e-mailadres heeft al een account.';
+  if (/not confirmed/i.test(m)) return 'Bevestig eerst je e-mail (check je inbox).';
+  if (/rate limit/i.test(m)) return 'Te veel pogingen, probeer het straks opnieuw.';
+  if (/should be different/i.test(m)) return 'Kies een ander wachtwoord dan je huidige.';
+  return m;
+}
+$('authForm').onsubmit = async e => {
+  e.preventDefault(); if (!sb) return;
+  const email = $('email').value.trim(), password = $('password').value;
+  if (password.length < 6) return setMsg('Wachtwoord moet minstens 6 tekens zijn.');
+  $('authSubmit').disabled = true;
+  const res = mode === 'login' ? await sb.auth.signInWithPassword({ email, password }) : await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+  $('authSubmit').disabled = false;
+  if (res.error) return setMsg(vertaalFout(res.error.message));
+  if (mode === 'register' && !res.data.session) setMsg('Account gemaakt! Check je e-mail om te bevestigen.', 'ok');
+};
+$('forgot').onclick = async () => {
+  if (!sb) return;
+  const email = $('email').value.trim();
+  if (!email) return setMsg('Vul eerst je e-mail in.');
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  setMsg(error ? vertaalFout(error.message) : 'Reset-link verstuurd naar je e-mail.', error ? 'err' : 'ok');
+};
+async function changePassword() {
+  const np = prompt('Nieuw wachtwoord (minstens 6 tekens):'); if (!np) return;
+  if (np.length < 6) return alert('Wachtwoord moet minstens 6 tekens zijn.');
+  const { error } = await sb.auth.updateUser({ password: np });
+  alert(error ? vertaalFout(error.message) : 'Wachtwoord aangepast!');
+}
+$('pwBtn').onclick = changePassword;
+$('helpBtn').onclick = () => openModal('helpModal');
+$('logout').onclick = async () => { await saveNow(); await sb.auth.signOut(); };
+
+function render(session) {
+  const u = session && session.user ? session.user.id : null;
+  if (u === currentUser) return;
+  currentUser = u;
+  $('auth').classList.toggle('hidden', !!u);
+  $('app').classList.toggle('hidden', !u);
+  if (u) { $('userEmail').textContent = session.user.email; loadItems(true); }
+  else { items = []; currentId = null; dirty = false; pres = null; $('password').value = ''; $('presView').classList.add('hidden'); }
+}
+
+/* ---------- Alleen-bekijken ---------- */
+async function showViewer(id) {
+  readOnly = true; document.body.classList.add('ro');
+  $('app').classList.remove('hidden'); $('roBadge').classList.remove('hidden'); $('ownLink').classList.remove('hidden');
+  $('title').readOnly = true;
+  const { data, error } = await sb.from('presentations').select('title,data,updated_at').eq('id', id).eq('is_public', true).maybeSingle();
+  if (error || !data) { $('emptyText').textContent = 'Deze presentatie bestaat niet of wordt niet meer gedeeld.'; $('emptyState').classList.remove('hidden'); return; }
+  document.title = data.title + ' - jf.presentations';
+  $('title').value = data.title; pres = normalize(data.data); cur = 0;
+  $('presView').classList.remove('hidden'); renderAll();
+}
+
+/* ---------- Lijst ---------- */
+async function loadItems(openFirst) {
+  setStatus('Laden...');
+  const { data, error } = await sb.from('presentations').select(FIELDS).order('updated_at', { ascending: false });
+  if (error) return setStatus('Fout bij laden: ' + error.message);
+  items = data; renderList(); setStatus('');
+  if (openFirst) {
+    const last = localStorage.getItem('jf-pres-last');
+    const t = items.find(d => d.id === last && !d.deleted_at) || items.find(d => !d.deleted_at);
+    if (t) openItem(t.id); else showEmpty();
+  }
+}
+function formatDate(s) {
+  const d = new Date(s), now = new Date();
+  const tm = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return 'Vandaag ' + tm;
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return 'Gisteren ' + tm;
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function addHead(ul, text) { const h = document.createElement('div'); h.className = 'list-head'; h.textContent = text; ul.append(h); }
+function renderList() {
+  const q = $('search').value.toLowerCase(), ul = $('list'), inTrash = view === 'trash', s = $('sortSel').value;
+  ul.innerHTML = '';
+  const list = items.filter(d => (!!d.deleted_at) === inTrash && (d.title || '').toLowerCase().includes(q));
+  list.sort((a, b) => s === 'name' ? (a.title || '').localeCompare(b.title || '', 'nl') : s === 'created' ? b.created_at.localeCompare(a.created_at) : b.updated_at.localeCompare(a.updated_at));
+  const tc = items.filter(d => d.deleted_at).length;
+  $('trashBtn').textContent = inTrash ? '\u2190 Terug naar presentaties' : '\uD83D\uDDD1 Prullenbak (' + tc + ')';
+  $('emptyTrash').classList.toggle('hidden', !inTrash || !tc);
+  $('newBtn').classList.toggle('hidden', inTrash);
+  if (!list.length) { const div = document.createElement('div'); div.className = 'empty-list'; div.textContent = inTrash ? 'De prullenbak is leeg.' : items.some(d => !d.deleted_at) ? 'Niks gevonden.' : 'Nog geen presentaties. Maak er een!'; ul.append(div); return; }
+  const pinned = inTrash ? [] : list.filter(d => d.pinned), rest = inTrash ? list : list.filter(d => !d.pinned);
+  if (pinned.length) { addHead(ul, 'Favorieten'); pinned.forEach(d => ul.append(item(d, false))); addHead(ul, 'Presentaties'); }
+  rest.forEach(d => ul.append(item(d, inTrash)));
+}
+function item(d, inTrash) {
+  const li = document.createElement('li');
+  if (d.id === currentId && !inTrash) li.className = 'active';
+  const t = document.createElement('div'); t.className = 't';
+  t.textContent = (d.pinned && !inTrash ? '\u2605 ' : '') + (d.title || 'Naamloze presentatie') + (d.is_public ? '  \uD83D\uDD17' : '');
+  const dt = document.createElement('div'); dt.className = 'd'; dt.textContent = inTrash ? 'Verwijderd ' + formatDate(d.deleted_at) : formatDate(d.updated_at);
+  li.append(t, dt);
+  if (inTrash) {
+    const acts = document.createElement('div'); acts.className = 'acts';
+    const r = document.createElement('button'); r.className = 'icon-btn'; r.textContent = 'Herstellen'; r.onclick = () => restoreItem(d.id);
+    const x = document.createElement('button'); x.className = 'icon-btn danger'; x.textContent = 'Definitief weg'; x.onclick = () => deleteForever(d.id);
+    acts.append(r, x); li.append(acts); li.style.cursor = 'default';
+  } else li.onclick = () => { openItem(d.id); document.body.classList.remove('side-open'); };
+  return li;
+}
+$('search').addEventListener('input', renderList);
+$('sortSel').value = localStorage.getItem('jf-pres-sort') || 'updated';
+$('sortSel').onchange = () => { localStorage.setItem('jf-pres-sort', $('sortSel').value); renderList(); };
+$('trashBtn').onclick = () => { view = view === 'trash' ? 'list' : 'trash'; renderList(); };
+
+async function openItem(id) {
+  stopEdit(); await saveNow();
+  const { data, error } = await sb.from('presentations').select('*').eq('id', id).single();
+  if (error) return setStatus('Kon presentatie niet openen');
+  currentId = id; localStorage.setItem('jf-pres-last', id);
+  pres = normalize(data.data); cur = 0; selId = null; undoStack = []; redoStack = [];
+  $('title').value = data.title;
+  $('emptyState').classList.add('hidden'); $('presView').classList.remove('hidden');
+  document.title = (data.title || 'Naamloze presentatie') + ' - jf.presentations';
+  renderAll(); updateHeadButtons(); renderList(); setStatus('Opgeslagen');
+}
+function showEmpty() { currentId = null; pres = null; $('presView').classList.add('hidden'); $('emptyState').classList.remove('hidden'); document.title = 'jf.presentations'; renderList(); }
+function updateHeadButtons() {
+  const d = curItem(); if (!d) return;
+  $('pinBtn').innerHTML = d.pinned ? '&#9733;' : '&#9734;'; $('pinBtn').classList.toggle('on', !!d.pinned);
+  $('shareBtn').classList.toggle('on', !!d.is_public); $('shareBtn').textContent = d.is_public ? 'Gedeeld' : 'Delen';
+}
+function markDirty() { if (readOnly || !currentId) return; dirty = true; setStatus('Niet opgeslagen...'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1200); }
+async function saveNow() {
+  clearTimeout(saveTimer);
+  if (!dirty || !currentId || readOnly) return;
+  if (!navigator.onLine) { setStatus('Offline - wordt later opgeslagen'); return; }
+  dirty = false;
+  const id = currentId, title = $('title').value.trim() || 'Naamloze presentatie', updated_at = new Date().toISOString();
+  setStatus('Opslaan...');
+  const { error } = await sb.from('presentations').update({ title, data: pres, updated_at }).eq('id', id);
+  if (error) { dirty = true; setStatus(/too large|payload/i.test(error.message) ? 'Te groot om op te slaan - gebruik kleinere afbeeldingen' : 'Opslaan mislukt - opnieuw proberen...'); saveTimer = setTimeout(saveNow, 6000); return; }
+  const d = items.find(x => x.id === id); if (d) { d.title = title; d.updated_at = updated_at; renderList(); }
+  if (id === currentId) document.title = title + ' - jf.presentations';
+  setStatus('Opgeslagen \u2713');
+}
+$('title').addEventListener('input', markDirty);
+$('title').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+window.addEventListener('online', () => { $('offline').classList.add('hidden'); if (dirty) saveNow(); });
+window.addEventListener('offline', () => $('offline').classList.remove('hidden'));
+window.addEventListener('beforeunload', e => { if (dirty) { saveNow(); e.preventDefault(); e.returnValue = ''; } });
+
+$('pinBtn').onclick = async () => { const d = curItem(); if (!d) return; const pinned = !d.pinned; const { error } = await sb.from('presentations').update({ pinned }).eq('id', d.id); if (error) return alert(error.message); d.pinned = pinned; updateHeadButtons(); renderList(); toast(pinned ? 'Toegevoegd aan favorieten' : 'Uit favorieten gehaald'); };
+$('deleteBtn').onclick = async () => {
+  const d = curItem(); if (!d) return; stopEdit(); await saveNow();
+  const deleted_at = new Date().toISOString();
+  const { error } = await sb.from('presentations').update({ deleted_at, is_public: false }).eq('id', d.id);
+  if (error) return alert('Verwijderen mislukt: ' + error.message);
+  d.deleted_at = deleted_at; d.is_public = false; currentId = null;
+  const next = items.find(x => !x.deleted_at); if (next) openItem(next.id); else showEmpty();
+  toast('Naar de prullenbak verplaatst');
+};
+async function restoreItem(id) { const { error } = await sb.from('presentations').update({ deleted_at: null }).eq('id', id); if (error) return alert(error.message); const d = items.find(x => x.id === id); if (d) d.deleted_at = null; view = 'list'; openItem(id); toast('Presentatie hersteld'); }
+async function deleteForever(id) { if (!confirm('Deze presentatie definitief verwijderen? Dit kan niet ongedaan worden.')) return; const { error } = await sb.from('presentations').delete().eq('id', id); if (error) return alert(error.message); items = items.filter(x => x.id !== id); renderList(); }
+$('emptyTrash').onclick = async () => { const n = items.filter(d => d.deleted_at).length; if (!n || !confirm('Alle ' + n + ' presentaties in de prullenbak definitief verwijderen?')) return; const { error } = await sb.from('presentations').delete().not('deleted_at', 'is', null); if (error) return alert(error.message); items = items.filter(d => !d.deleted_at); renderList(); toast('Prullenbak geleegd'); };
+function fillShare() { const d = curItem(); if (!d) return; $('publicChk').checked = !!d.is_public; $('shareRow').classList.toggle('hidden', !d.is_public); $('shareLink').value = location.origin + location.pathname + '?view=' + d.id; }
+$('shareBtn').onclick = () => { fillShare(); openModal('shareModal'); };
+$('publicChk').onchange = async () => { const d = curItem(); if (!d) return; const is_public = $('publicChk').checked; const { error } = await sb.from('presentations').update({ is_public }).eq('id', d.id); if (error) { $('publicChk').checked = !is_public; return alert(error.message); } d.is_public = is_public; fillShare(); updateHeadButtons(); renderList(); };
+$('copyLink').onclick = async () => { try { await navigator.clipboard.writeText($('shareLink').value); } catch (e) { $('shareLink').select(); document.execCommand('copy'); } toast('Link gekopieerd!'); };
+
+/* ============ THEMA'S, LAY-OUTS, SJABLONEN ============ */
+const THEMES = {
+  licht: { name: 'Licht', bg: '#ffffff', text: '#1a1a1a', sub: '#5c5f66', accent: '#fab005' },
+  donker: { name: 'Donker', bg: '#141417', text: '#f4f4f5', sub: '#a1a1aa', accent: '#fcc419' },
+  zonnig: { name: 'Zonnig', bg: '#fff3bf', text: '#2b2100', sub: '#7a5c00', accent: '#e67700' },
+  oceaan: { name: 'Oceaan', bg: '#0b3a5b', text: '#ffffff', sub: '#a5d8ff', accent: '#4dabf7' },
+  bos: { name: 'Bos', bg: '#1f3d2b', text: '#f1f8f3', sub: '#b2f2bb', accent: '#69db7c' },
+  papier: { name: 'Papier', bg: '#f8f5ee', text: '#2d2a24', sub: '#6b6458', accent: '#d9480f', font: 'Georgia,serif' }
+};
+function theme() { return THEMES[pres && pres.theme] || THEMES.licht; }
+function col(c, t) { t = t || theme(); if (!c) return t.text; if (c === 'text' || c === 'sub' || c === 'accent' || c === 'bg') return t[c]; return c; }
+const PH = { title: 'Dubbelklik om een titel te typen', sub: 'Ondertitel', body: 'Dubbelklik om tekst te typen' };
+function Tx(role, x, y, w, h, fs, o) { return Object.assign({ id: uid(), type: 'text', role, x, y, w, h, rot: 0, html: '', fontSize: fs, bold: role === 'title', italic: false, underline: false, color: role === 'sub' ? 'sub' : 'text', align: 'left', font: '', fill: '' }, o || {}); }
+function Sh(shape, x, y, w, h, o) { return Object.assign({ id: uid(), type: 'shape', shape, x, y, w, h, rot: 0, fill: 'accent', stroke: '', sw: 0 }, o || {}); }
+function Im(x, y, w, h, src) { return { id: uid(), type: 'image', src: src || '', fit: 'cover', x, y, w, h, rot: 0 }; }
+function Tb(x, y, w, h, rows) { return { id: uid(), type: 'table', x, y, w, h, rot: 0, rows, head: true, fontSize: 24 }; }
+function Ch(x, y, w, h, kind, data) { return { id: uid(), type: 'chart', kind, data, x, y, w, h, rot: 0 }; }
+const UL = '<ul><li><br></li></ul>';
+const titleEl = () => Tx('title', 80, 46, 1120, 100, 52);
+const barEl = () => Sh('rect', 92, 150, 90, 7);
+const LAYOUTS = {
+  titel: { name: 'Titeldia', make: () => [Tx('title', 100, 225, 1080, 150, 76, { align: 'center' }), Tx('sub', 190, 385, 900, 70, 32, { align: 'center' }), Sh('rect', 590, 490, 100, 8)] },
+  inhoud: { name: 'Titel en inhoud', make: () => [titleEl(), barEl(), Tx('body', 80, 190, 1120, 470, 30, { html: UL })] },
+  twee: { name: 'Twee kolommen', make: () => [titleEl(), barEl(), Tx('body', 80, 190, 540, 470, 28, { html: UL }), Tx('body', 660, 190, 540, 470, 28, { html: UL })] },
+  afbeelding: { name: 'Tekst en afbeelding', make: () => [titleEl(), barEl(), Tx('body', 80, 190, 520, 470, 28, { html: UL }), Im(650, 190, 550, 470)] },
+  sectie: { name: 'Sectiekop', make: () => [Sh('rect', 80, 268, 12, 175), Tx('title', 115, 265, 1050, 110, 64), Tx('sub', 115, 378, 1000, 60, 28)] },
+  alleenTitel: { name: 'Alleen titel', make: () => [titleEl(), barEl()] },
+  leeg: { name: 'Leeg', make: () => [] }
+};
+function newSlide(layout) { return { id: uid(), layout, bg: '', notes: '', trans: 'fade', els: (LAYOUTS[layout] || LAYOUTS.leeg).make() }; }
+function fill(s, role, html, n) { const e = s.els.filter(x => x.role === role)[n || 0]; if (e) e.html = html; return s; }
+function li(arr) { return '<ul>' + arr.map(a => '<li>' + a + '</li>').join('') + '</ul>'; }
+const TEMPLATES = {
+  leeg: () => [fill(newSlide('titel'), 'title', '')],
+  spreekbeurt: () => [
+    fill(fill(newSlide('titel'), 'title', 'Mijn spreekbeurt'), 'sub', 'Naam &middot; Klas &middot; Datum'),
+    fill(fill(newSlide('inhoud'), 'title', 'Inleiding'), 'body', li(['Waarom ik dit onderwerp koos', 'Wat je vandaag gaat leren', 'Hoe mijn spreekbeurt is opgebouwd'])),
+    fill(fill(newSlide('inhoud'), 'title', 'Onderwerp 1'), 'body', li(['Eerste punt', 'Tweede punt', 'Een leuk weetje'])),
+    fill(fill(newSlide('afbeelding'), 'title', 'Onderwerp 2'), 'body', li(['Vertel wat je op de foto ziet', 'Leg uit waarom het belangrijk is'])),
+    fill(fill(fill(newSlide('twee'), 'title', 'Onderwerp 3'), 'body', li(['Voordelen', 'Nog een voordeel']), 0), 'body', li(['Nadelen', 'Nog een nadeel']), 1),
+    fill(fill(newSlide('inhoud'), 'title', 'Conclusie'), 'body', li(['Wat je moet onthouden', 'Mijn mening'])),
+    fill(fill(newSlide('sectie'), 'title', 'Vragen?'), 'sub', 'Bedankt voor het luisteren!')
+  ],
+  project: () => {
+    const plan = newSlide('alleenTitel'); fill(plan, 'title', 'Planning'); plan.els.push(Tb(80, 195, 1120, 330, [['Week', 'Wat gaan we doen', 'Wie'], ['1', 'Idee en onderzoek', 'Iedereen'], ['2', 'Ontwerp maken', ''], ['3', 'Bouwen', ''], ['4', 'Testen en presenteren', '']]));
+    const res = newSlide('alleenTitel'); fill(res, 'title', 'Resultaten'); res.els.push(Ch(140, 190, 1000, 480, 'bar', [{ l: 'Week 1', v: 20 }, { l: 'Week 2', v: 45 }, { l: 'Week 3', v: 70 }, { l: 'Week 4', v: 100 }]));
+    return [
+      fill(fill(newSlide('titel'), 'title', 'Projectnaam'), 'sub', 'Team &middot; Datum'),
+      fill(fill(newSlide('inhoud'), 'title', 'Doel'), 'body', li(['Wat willen we bereiken?', 'Voor wie is het?'])),
+      fill(fill(newSlide('inhoud'), 'title', 'Aanpak'), 'body', li(['Stap 1', 'Stap 2', 'Stap 3'])),
+      plan, res,
+      fill(fill(newSlide('sectie'), 'title', 'Vragen?'), 'sub', 'Bedankt!')
+    ];
+  }
+};
+function normalize(d) {
+  if (!d || !Array.isArray(d.slides) || !d.slides.length) d = { theme: 'licht', slides: [newSlide('titel')] };
+  if (!THEMES[d.theme]) d.theme = 'licht';
+  d.slides.forEach(s => { s.id = s.id || uid(); s.els = Array.isArray(s.els) ? s.els : []; s.notes = s.notes || ''; s.trans = s.trans || 'fade'; s.els.forEach(e => { e.id = e.id || uid(); e.rot = e.rot || 0; }); });
+  return d;
+}
+
+/* ============ TEKENEN ============ */
+function slide() { return pres.slides[cur]; }
+function findEl(id) { return slide().els.find(e => e.id === id); }
+function slideEl(s, opts) {
+  const t = theme(), d = document.createElement('div');
+  d.className = 'sl' + (opts && opts.editor ? ' ph-on' : '');
+  d.style.background = s.bg || t.bg; d.style.color = t.text; d.style.fontFamily = t.font || '';
+  d.style.setProperty('--acc', t.accent); d.style.setProperty('--tb', t.sub);
+  s.els.forEach(e => d.append(renderEl(e, t)));
+  return d;
+}
+function renderEl(e, t) {
+  const d = document.createElement('div');
+  d.className = 'el'; d.dataset.id = e.id;
+  d.style.left = e.x + 'px'; d.style.top = e.y + 'px'; d.style.width = e.w + 'px'; d.style.height = e.h + 'px';
+  if (e.rot) d.style.transform = 'rotate(' + e.rot + 'deg)';
+  if (e.type === 'text') {
+    const x = document.createElement('div'); x.className = 'txt'; x.innerHTML = clean(e.html); x.dataset.ph = PH[e.role] || PH.body;
+    x.style.fontSize = e.fontSize + 'px'; x.style.color = col(e.color, t); x.style.textAlign = e.align || 'left';
+    x.style.fontWeight = e.bold ? '700' : '400'; x.style.fontStyle = e.italic ? 'italic' : ''; x.style.textDecoration = e.underline ? 'underline' : '';
+    if (e.font) x.style.fontFamily = e.font;
+    if (e.fill) { x.style.background = col(e.fill, t); x.style.borderRadius = '10px'; }
+    d.append(x); if (!x.textContent.trim() && !x.querySelector('img')) d.classList.add('empty');
+  } else if (e.type === 'shape') d.innerHTML = shapeSvg(e, t);
+  else if (e.type === 'image') {
+    if (e.src) { const im = document.createElement('img'); im.src = e.src; im.alt = ''; im.style.objectFit = e.fit || 'cover'; im.draggable = false; d.append(im); }
+    else { const p = document.createElement('div'); p.className = 'img-ph'; p.textContent = '\uD83D\uDDBC Dubbelklik om een afbeelding te kiezen'; d.append(p); }
+  } else if (e.type === 'table') {
+    const tb = document.createElement('table'); tb.style.fontSize = (e.fontSize || 24) + 'px'; tb.style.color = col('text', t);
+    e.rows.forEach((row, r) => { const tr = document.createElement('tr'); row.forEach((cell, c) => { const td = document.createElement(r === 0 && e.head ? 'th' : 'td'); td.textContent = cell; td.dataset.r = r; td.dataset.c = c; if (r === 0 && e.head) { td.style.background = t.accent; td.style.color = '#111'; td.style.fontWeight = '700'; } tr.append(td); }); tb.append(tr); });
+    d.append(tb);
+  } else if (e.type === 'chart') d.innerHTML = chartSvg(e, t);
+  return d;
+}
+function shapeSvg(e, t) {
+  const w = e.w, h = e.h, f = e.fill ? col(e.fill, t) : 'none', s = e.stroke ? col(e.stroke, t) : 'none', sw = e.stroke ? (e.sw || 0) : 0, o = sw / 2;
+  const attr = ' fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '"';
+  let inner = '';
+  if (e.shape === 'rect') inner = '<rect x="' + o + '" y="' + o + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '"' + attr + '/>';
+  else if (e.shape === 'round') inner = '<rect x="' + o + '" y="' + o + '" width="' + Math.max(1, w - sw) + '" height="' + Math.max(1, h - sw) + '" rx="' + Math.min(w, h) * 0.18 + '"' + attr + '/>';
+  else if (e.shape === 'ellipse') inner = '<ellipse cx="' + w / 2 + '" cy="' + h / 2 + '" rx="' + Math.max(1, (w - sw) / 2) + '" ry="' + Math.max(1, (h - sw) / 2) + '"' + attr + '/>';
+  else if (e.shape === 'triangle') inner = '<polygon points="' + w / 2 + ',' + o + ' ' + (w - o) + ',' + (h - o) + ' ' + o + ',' + (h - o) + '"' + attr + ' stroke-linejoin="round"/>';
+  else if (e.shape === 'arrow') inner = '<polygon points="' + [[0, .3], [.62, .3], [.62, 0], [1, .5], [.62, 1], [.62, .7], [0, .7]].map(p => (p[0] * w) + ',' + (p[1] * h)).join(' ') + '"' + attr + ' stroke-linejoin="round"/>';
+  else if (e.shape === 'star') { const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .42 : 1; pts.push((w / 2 + Math.cos(a) * r * (w / 2 - o)) + ',' + (h / 2 + Math.sin(a) * r * (h / 2 - o) + h * 0.04)); } inner = '<polygon points="' + pts.join(' ') + '"' + attr + ' stroke-linejoin="round"/>'; }
+  else if (e.shape === 'line') inner = '<line x1="0" y1="' + h / 2 + '" x2="' + w + '" y2="' + h / 2 + '" stroke="' + (e.stroke ? s : (e.fill ? f : t.text)) + '" stroke-width="' + Math.max(sw, 6) + '" stroke-linecap="round"/>';
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + inner + '</svg>';
+}
+const PAL = ['#1c7ed6', '#2f9e44', '#e8590c', '#ae3ec9', '#0ca678', '#e64980', '#868e96'];
+function chartSvg(e, t) {
+  const w = e.w, h = e.h, data = (e.data || []).filter(d => isFinite(d.v)), tc = t.text, pal = [t.accent].concat(PAL), F = 'font-family="inherit"';
+  let o = '<svg viewBox="0 0 ' + w + ' ' + h + '">';
+  if (!data.length) return o + '<text x="' + w / 2 + '" y="' + h / 2 + '" text-anchor="middle" fill="' + tc + '" font-size="26" ' + F + '>Geen gegevens</text></svg>';
+  const fs = Math.max(14, Math.min(22, h / 22));
+  if (e.kind === 'pie') {
+    const tot = data.reduce((a, d) => a + Math.max(0, d.v), 0) || 1, r = Math.min(h / 2 - 16, w * 0.3), cx = r + 16, cy = h / 2;
+    let a0 = -Math.PI / 2;
+    data.forEach((d, i) => {
+      const fr = Math.max(0, d.v) / tot, a1 = a0 + fr * Math.PI * 2, large = fr > .5 ? 1 : 0, c = pal[i % pal.length];
+      if (fr >= .9999) o += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + c + '"/>';
+      else if (fr > 0) o += '<path d="M' + cx + ' ' + cy + ' L' + (cx + r * Math.cos(a0)) + ' ' + (cy + r * Math.sin(a0)) + ' A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + (cx + r * Math.cos(a1)) + ' ' + (cy + r * Math.sin(a1)) + ' Z" fill="' + c + '" stroke="' + t.bg + '" stroke-width="3"/>';
+      a0 = a1;
+    });
+    const lx = cx + r + 40, rowH = Math.min(46, (h - 20) / data.length);
+    data.forEach((d, i) => { const y = cy - (data.length * rowH) / 2 + i * rowH + rowH / 2; o += '<rect x="' + lx + '" y="' + (y - fs / 2) + '" width="' + fs + '" height="' + fs + '" rx="4" fill="' + pal[i % pal.length] + '"/><text x="' + (lx + fs + 12) + '" y="' + (y + fs * .35) + '" fill="' + tc + '" font-size="' + fs + '" ' + F + '>' + esc(d.l) + ' (' + Math.round(Math.max(0, d.v) / tot * 100) + '%)</text>'; });
+    return o + '</svg>';
+  }
+  const L = 70, R = 20, T = 24, B = 54, pw = w - L - R, ph = h - T - B;
+  const mx = Math.max(0, ...data.map(d => d.v)), mn = Math.min(0, ...data.map(d => d.v)), span = (mx - mn) || 1;
+  const Y = v => T + ph - (v - mn) / span * ph;
+  for (let i = 0; i <= 4; i++) { const v = mn + span * i / 4, y = Y(v); o += '<line x1="' + L + '" y1="' + y + '" x2="' + (w - R) + '" y2="' + y + '" stroke="' + t.sub + '" stroke-opacity=".25" stroke-width="1.5"/><text x="' + (L - 10) + '" y="' + (y + fs * .35) + '" text-anchor="end" fill="' + t.sub + '" font-size="' + fs * .85 + '" ' + F + '>' + (+v.toPrecision(4)).toLocaleString('nl-NL') + '</text>'; }
+  const step = pw / data.length;
+  data.forEach((d, i) => { const x = L + step * i + step / 2; o += '<text x="' + x + '" y="' + (h - B + fs + 12) + '" text-anchor="middle" fill="' + tc + '" font-size="' + fs + '" ' + F + '>' + esc(d.l) + '</text>'; });
+  if (e.kind === 'line') {
+    const pts = data.map((d, i) => (L + step * i + step / 2) + ',' + Y(d.v)).join(' ');
+    o += '<polyline points="' + pts + '" fill="none" stroke="' + t.accent + '" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>';
+    data.forEach((d, i) => { const x = L + step * i + step / 2, y = Y(d.v); o += '<circle cx="' + x + '" cy="' + y + '" r="8" fill="' + t.accent + '" stroke="' + t.bg + '" stroke-width="3"/><text x="' + x + '" y="' + (y - 16) + '" text-anchor="middle" fill="' + tc + '" font-size="' + fs * .9 + '" font-weight="700" ' + F + '>' + d.v.toLocaleString('nl-NL') + '</text>'; });
+  } else {
+    const bw = step * .6;
+    data.forEach((d, i) => { const x = L + step * i + (step - bw) / 2, y1 = Y(Math.max(0, d.v)), y0 = Y(Math.min(0, d.v)); o += '<rect x="' + x + '" y="' + y1 + '" width="' + bw + '" height="' + Math.max(1, y0 - y1) + '" rx="6" fill="' + pal[i % pal.length] + '"/><text x="' + (x + bw / 2) + '" y="' + (y1 - 10) + '" text-anchor="middle" fill="' + tc + '" font-size="' + fs * .9 + '" font-weight="700" ' + F + '>' + d.v.toLocaleString('nl-NL') + '</text>'; });
+  }
+  return o + '</svg>';
+}
+
+/* ============ DIA-MINIATUREN ============ */
+let dragFrom = -1;
+function renderThumbs() {
+  const box = $('thumbs'); box.innerHTML = '';
+  pres.slides.forEach((s, i) => {
+    const t = document.createElement('div'); t.className = 'thumb' + (i === cur ? ' active' : ''); t.dataset.i = i;
+    const n = document.createElement('div'); n.className = 'num'; n.textContent = i + 1;
+    const m = document.createElement('div'); m.className = 'mini'; m.append(slideEl(s));
+    t.append(n, m);
+    if (!readOnly) { const a = document.createElement('div'); a.className = 'tacts'; a.innerHTML = '<button data-ta="dup" title="Dia dupliceren">\u29C9</button><button data-ta="del" title="Dia verwijderen">\uD83D\uDDD1</button>'; t.append(a); t.draggable = true; }
+    box.append(t);
+  });
+}
+function updateThumb(i) { const t = $('thumbs').children[i]; if (!t || !pres.slides[i]) return; const m = t.querySelector('.mini'); m.innerHTML = ''; m.append(slideEl(pres.slides[i])); }
+function thumbSoon() { clearTimeout(thumbTimer); const i = cur; thumbTimer = setTimeout(() => updateThumb(i), 250); }
+function setActiveThumb() { [...$('thumbs').children].forEach((t, i) => t.classList.toggle('active', i === cur)); const a = $('thumbs').children[cur]; if (a) a.scrollIntoView({ block: 'nearest' }); }
+$('thumbs').addEventListener('click', e => {
+  const t = e.target.closest('.thumb'); if (!t) return;
+  const i = +t.dataset.i, ta = e.target.closest('[data-ta]');
+  if (ta) { e.stopPropagation(); if (ta.dataset.ta === 'dup') dupSlide(i); else delSlide(i); return; }
+  goSlide(i);
+});
+$('thumbs').addEventListener('dragstart', e => { const t = e.target.closest('.thumb'); if (!t) return; dragFrom = +t.dataset.i; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', 'slide'); } catch (x) {} });
+$('thumbs').addEventListener('dragover', e => { if (dragFrom < 0) return; e.preventDefault(); const t = e.target.closest('.thumb'); [...$('thumbs').children].forEach(x => x.classList.remove('drop')); if (t) t.classList.add('drop'); });
+$('thumbs').addEventListener('dragleave', e => { if (!e.relatedTarget || !$('thumbs').contains(e.relatedTarget)) [...$('thumbs').children].forEach(x => x.classList.remove('drop')); });
+$('thumbs').addEventListener('drop', e => {
+  e.preventDefault(); const t = e.target.closest('.thumb'); [...$('thumbs').children].forEach(x => x.classList.remove('drop'));
+  if (!t || dragFrom < 0) return; let to = +t.dataset.i; const r = t.getBoundingClientRect(); if (e.clientY > r.top + r.height * .65 && to === pres.slides.length - 1) to = pres.slides.length;
+  moveSlide(dragFrom, to); dragFrom = -1;
+});
+$('thumbs').addEventListener('dragend', () => { dragFrom = -1; [...$('thumbs').children].forEach(x => x.classList.remove('drop')); });
+
+/* ============ PODIUM ============ */
+function renderStage() {
+  const h = $('slideHolder'); h.innerHTML = '';
+  const s = slideEl(slide(), { editor: !readOnly }); s.id = 'slide'; h.append(s);
+  fitStage(); drawSel(); updateToolbar(); $('notes').value = slide().notes || '';
+}
+function fitStage() {
+  const w = $('stageWrap'), s = $('slide'); if (!s) return;
+  const aw = Math.max(100, w.clientWidth - 48), ah = Math.max(60, w.clientHeight - 48);
+  scale = Math.min(aw / W, ah / H);
+  $('slideHolder').style.width = W * scale + 'px'; $('slideHolder').style.height = H * scale + 'px';
+  s.style.transform = 'scale(' + scale + ')'; s.style.setProperty('--s', scale);
+}
+new ResizeObserver(fitStage).observe($('stageWrap'));
+function renderAll() { if (!pres) return; cur = Math.max(0, Math.min(cur, pres.slides.length - 1)); renderThumbs(); renderStage(); buildThemeMenu(); }
+function elDom(id) { const s = $('slide'); return s ? s.querySelector('.el[data-id="' + id + '"]') : null; }
+function rerenderEl(e) { const old = elDom(e.id); if (old) old.replaceWith(renderEl(e, theme())); }
+const HD = [['nw', '0%', '0%', 'nwse-resize'], ['n', '50%', '0%', 'ns-resize'], ['ne', '100%', '0%', 'nesw-resize'], ['e', '100%', '50%', 'ew-resize'], ['se', '100%', '100%', 'nwse-resize'], ['s', '50%', '100%', 'ns-resize'], ['sw', '0%', '100%', 'nesw-resize'], ['w', '0%', '50%', 'ew-resize'], ['rot', '50%', '0%', 'grab']];
+function drawSel() {
+  const s = $('slide'); if (!s) return;
+  s.querySelectorAll('.selbox').forEach(x => x.remove());
+  if (!selId || readOnly) return;
+  const e = findEl(selId); if (!e) { selId = null; return; }
+  const b = document.createElement('div'); b.className = 'selbox';
+  b.style.left = e.x + 'px'; b.style.top = e.y + 'px'; b.style.width = e.w + 'px'; b.style.height = e.h + 'px';
+  if (e.rot) b.style.transform = 'rotate(' + e.rot + 'deg)';
+  if (editId !== e.id) HD.forEach(h => { const d = document.createElement('div'); d.className = 'hdl' + (h[0] === 'rot' ? ' rot' : ''); d.dataset.h = h[0]; d.style.left = h[1]; d.style.top = h[2]; d.style.cursor = h[3]; b.append(d); });
+  s.append(b);
+}
+function showGuides(list) {
+  const s = $('slide'); if (!s) return; s.querySelectorAll('.guide').forEach(x => x.remove());
+  list.forEach(g => { const d = document.createElement('div'); d.className = 'guide'; if (g.v) { d.style.left = g.p + 'px'; d.style.top = '0'; d.style.width = 2 / scale + 'px'; d.style.height = '100%'; } else { d.style.top = g.p + 'px'; d.style.left = '0'; d.style.height = 2 / scale + 'px'; d.style.width = '100%'; } s.append(d); });
+}
+function select(id) { if (editId && editId !== id) stopEdit(); selId = id; drawSel(); updateToolbar(); }
+
+/* ---------- Muis op de dia ---------- */
+$('slideHolder').addEventListener('pointerdown', e => {
+  if (readOnly || e.button !== 0) return;
+  const hd = e.target.closest('.hdl');
+  if (hd) { e.preventDefault(); return hd.dataset.h === 'rot' ? startRotate(e) : startResize(e, hd.dataset.h); }
+  const d = e.target.closest('.el');
+  if (editId && d && d.dataset.id === editId) return;
+  if (editId) stopEdit();
+  if (!d) { select(null); return; }
+  e.preventDefault();
+  select(d.dataset.id); startMove(e, d.dataset.id);
+});
+$('slideHolder').addEventListener('dblclick', e => {
+  if (readOnly) return;
+  const d = e.target.closest('.el'); if (!d) return;
+  const el = findEl(d.dataset.id); if (!el) return;
+  if (el.type === 'text' || el.type === 'table') startEdit(el.id, e);
+  else if (el.type === 'image') replaceImage();
+  else if (el.type === 'chart') openChartEdit(el);
+});
+function drag(onMove, onUp) {
+  const mv = ev => onMove(ev), up = ev => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); onUp && onUp(ev); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+function startMove(e, id) {
+  const el = findEl(id), sx = e.clientX, sy = e.clientY, x0 = el.x, y0 = el.y; let moved = false;
+  drag(ev => {
+    const dx = (ev.clientX - sx) / scale, dy = (ev.clientY - sy) / scale;
+    if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+    if (!moved) { pushUndo(); moved = true; }
+    let nx = x0 + dx, ny = y0 + dy; const g = [], th = 7 / Math.max(scale, .3);
+    if (!ev.altKey) {
+      if (Math.abs(nx + el.w / 2 - W / 2) < th) { nx = W / 2 - el.w / 2; g.push({ v: true, p: W / 2 }); }
+      else if (Math.abs(nx) < th) { nx = 0; g.push({ v: true, p: 0 }); }
+      else if (Math.abs(nx + el.w - W) < th) { nx = W - el.w; g.push({ v: true, p: W }); }
+      if (Math.abs(ny + el.h / 2 - H / 2) < th) { ny = H / 2 - el.h / 2; g.push({ v: false, p: H / 2 }); }
+      else if (Math.abs(ny) < th) { ny = 0; g.push({ v: false, p: 0 }); }
+      else if (Math.abs(ny + el.h - H) < th) { ny = H - el.h; g.push({ v: false, p: H }); }
+    }
+    el.x = Math.round(nx); el.y = Math.round(ny);
+    const d = elDom(id); if (d) { d.style.left = el.x + 'px'; d.style.top = el.y + 'px'; }
+    drawSel(); showGuides(g);
+  }, () => { showGuides([]); if (moved) { markDirty(); thumbSoon(); } });
+}
+function startResize(e, dir) {
+  const el = findEl(selId); if (!el) return;
+  pushUndo();
+  const sx = e.clientX, sy = e.clientY, x0 = el.x, y0 = el.y, w0 = el.w, h0 = el.h, rad = -el.rot * Math.PI / 180;
+  const keep = el.type === 'image' && dir.length === 2;
+  drag(ev => {
+    const dx = (ev.clientX - sx) / scale, dy = (ev.clientY - sy) / scale;
+    const lx = dx * Math.cos(rad) - dy * Math.sin(rad), ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+    let w = w0, h = h0;
+    if (dir.includes('e')) w = w0 + lx; if (dir.includes('w')) w = w0 - lx;
+    if (dir.includes('s')) h = h0 + ly; if (dir.includes('n')) h = h0 - ly;
+    if ((keep || ev.shiftKey) && dir.length === 2) { const r = w0 / h0; if (Math.abs(w / w0) > Math.abs(h / h0)) h = w / r; else w = h * r; }
+    w = Math.max(20, Math.round(w)); h = Math.max(el.type === 'shape' && el.shape === 'line' ? 6 : 20, Math.round(h));
+    el.w = w; el.h = h; el.x = dir.includes('w') ? Math.round(x0 + w0 - w) : x0; el.y = dir.includes('n') ? Math.round(y0 + h0 - h) : y0;
+    rerenderEl(el); drawSel();
+  }, () => { markDirty(); thumbSoon(); });
+}
+function startRotate(e) {
+  const el = findEl(selId); if (!el) return;
+  pushUndo();
+  const r = elDom(el.id).getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  drag(ev => {
+    let a = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90;
+    a = ((a % 360) + 360) % 360;
+    if (ev.shiftKey) a = Math.round(a / 15) * 15; else { const n = Math.round(a / 90) * 90; if (Math.abs(a - n) < 5) a = n; }
+    el.rot = Math.round(a) % 360;
+    const d = elDom(el.id); if (d) d.style.transform = el.rot ? 'rotate(' + el.rot + 'deg)' : '';
+    drawSel();
+  }, () => { markDirty(); thumbSoon(); });
+}
+
+/* ---------- Tekst en tabellen bewerken ---------- */
+function startEdit(id, ev) {
+  const el = findEl(id); if (!el || readOnly) return;
+  if (editId) stopEdit();
+  pushUndo(); selId = id; editId = id;
+  const d = elDom(id); d.classList.add('editing'); d.classList.remove('empty'); drawSel();
+  if (el.type === 'text') {
+    const x = d.querySelector('.txt'); x.contentEditable = 'true'; x.focus();
+    const r = document.createRange(); const target = x.querySelector('li:last-child') || x; r.selectNodeContents(target); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  } else if (el.type === 'table') {
+    const cells = d.querySelectorAll('td,th'); cells.forEach(c => c.contentEditable = 'true');
+    let cell = ev && ev.target && ev.target.closest ? ev.target.closest('td,th') : null; cell = cell || cells[0]; if (cell) { cell.focus(); const r = document.createRange(); r.selectNodeContents(cell); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  }
+  updateToolbar();
+}
+function stopEdit() {
+  if (!editId) return;
+  const el = findEl(editId), d = elDom(editId); const id = editId; editId = null;
+  if (d && el) {
+    d.classList.remove('editing');
+    if (el.type === 'text') { const x = d.querySelector('.txt'); x.contentEditable = 'false'; el.html = clean(x.innerHTML); if (!x.textContent.trim() && !x.querySelector('img')) d.classList.add('empty'); }
+    else if (el.type === 'table') d.querySelectorAll('td,th').forEach(c => c.contentEditable = 'false');
+  }
+  try { getSelection().removeAllRanges(); } catch (x) {}
+  if (selId === id) drawSel();
+  thumbSoon(); updateToolbar();
+}
+$('slideHolder').addEventListener('input', e => {
+  if (!editId) return; const el = findEl(editId); if (!el) return;
+  if (el.type === 'text') { const x = e.target.closest('.txt'); if (x) el.html = x.innerHTML; }
+  else if (el.type === 'table') { const c = e.target.closest('td,th'); if (c) el.rows[+c.dataset.r][+c.dataset.c] = c.textContent; }
+  markDirty(); thumbSoon();
+});
+$('slideHolder').addEventListener('paste', e => {
+  if (!editId) return; e.preventDefault();
+  const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, t);
+});
+$('slideHolder').addEventListener('keydown', e => {
+  if (!editId) return; const el = findEl(editId);
+  if (e.key === 'Escape') { e.preventDefault(); stopEdit(); }
+  else if (el && el.type === 'table' && e.key === 'Enter') { e.preventDefault(); const c = e.target.closest('td,th'); const cells = [...elDom(el.id).querySelectorAll('td,th')]; const n = cells[cells.indexOf(c) + el.rows[0].length]; if (n) n.focus(); }
+});
+
+/* ============ ONGEDAAN MAKEN ============ */
+function snap() { return JSON.stringify({ slides: pres.slides, theme: pres.theme, cur }); }
+function pushUndo() { if (!pres) return; undoStack.push(snap()); if (undoStack.length > 60) undoStack.shift(); redoStack = []; }
+function restore(s) { const d = JSON.parse(s); pres.slides = d.slides; pres.theme = d.theme; cur = d.cur; selId = null; editId = null; renderAll(); markDirty(); }
+function undo() { if (readOnly) return; stopEdit(); if (!undoStack.length) return toast('Niets om ongedaan te maken'); redoStack.push(snap()); restore(undoStack.pop()); }
+function redo() { if (readOnly || !redoStack.length) return; stopEdit(); undoStack.push(snap()); restore(redoStack.pop()); }
+
+/* ============ WERKBALK ============ */
+const SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 96, 120, 150];
+function hexOf(c, fb) { const v = col(c); return /^#[0-9a-f]{6}$/i.test(v) ? v : fb; }
+function updateToolbar() {
+  if (!pres) return;
+  const el = selId ? findEl(selId) : null, t = el && el.type;
+  $('tbText').classList.toggle('hidden', t !== 'text'); $('tbShape').classList.toggle('hidden', t !== 'shape');
+  $('tbImage').classList.toggle('hidden', t !== 'image'); $('tbTable').classList.toggle('hidden', t !== 'table');
+  $('tbChart').classList.toggle('hidden', t !== 'chart'); $('tbArrange').classList.toggle('hidden', !el);
+  const on = (a, v) => { const b = document.querySelector('[data-act="' + a + '"]'); if (b) b.classList.toggle('on', !!v); };
+  if (t === 'text') {
+    $('fontSel').value = el.font || '';
+    const ss = $('sizeSel'); const list = SIZES.indexOf(el.fontSize) < 0 ? SIZES.concat([el.fontSize]).sort((a, b) => a - b) : SIZES;
+    ss.innerHTML = list.map(s => '<option value="' + s + '">' + s + '</option>').join(''); ss.value = el.fontSize;
+    on('bold', el.bold); on('italic', el.italic); on('underline', el.underline);
+    on('alL', (el.align || 'left') === 'left'); on('alC', el.align === 'center'); on('alR', el.align === 'right');
+    $('colorPick').value = hexOf(el.color, '#e8590c'); $('boxFill').value = hexOf(el.fill || '#fff3bf', '#fff3bf');
+  }
+  if (t === 'shape') { $('fillPick').value = hexOf(el.fill || 'accent', '#fab005'); $('strokePick').value = hexOf(el.stroke || 'text', '#1a1a1a'); $('strokeW').value = el.stroke ? String(el.sw || 0) : '0'; }
+  if (t === 'image') $('imgFitBtn').textContent = el.fit === 'contain' ? 'Bijsnijden' : 'Passend maken';
+  if (t === 'table') on('tblHead', el.head);
+  $('bgPick').value = hexOf(slide().bg || theme().bg, '#ffffff'); $('transSel').value = slide().trans || 'fade';
+}
+function editingText() { const el = editId && findEl(editId); return el && el.type === 'text' ? el : null; }
+function setProp(prop, val, rerender) {
+  const el = selId && findEl(selId); if (!el) return;
+  if (!editingText()) pushUndo();
+  el[prop] = val;
+  if (editingText() && el.id === editId) { const x = elDom(el.id).querySelector('.txt'); if (prop === 'align') x.style.textAlign = val; if (prop === 'fontSize') x.style.fontSize = val + 'px'; if (prop === 'font') x.style.fontFamily = val; if (prop === 'color') x.style.color = col(val); if (prop === 'bold') x.style.fontWeight = val ? '700' : '400'; if (prop === 'italic') x.style.fontStyle = val ? 'italic' : ''; if (prop === 'underline') x.style.textDecoration = val ? 'underline' : ''; if (prop === 'fill') { x.style.background = val ? col(val) : ''; x.style.borderRadius = val ? '10px' : ''; } }
+  else if (rerender !== false) { rerenderEl(el); drawSel(); }
+  markDirty(); thumbSoon(); updateToolbar();
+}
+function cmdOrProp(cmd, prop) {
+  const el = editingText();
+  if (el) { const s = getSelection(); if (s.rangeCount && !s.isCollapsed) { document.execCommand(cmd); return; } }
+  const t = selId && findEl(selId); if (t) setProp(prop, !t[prop]);
+}
+function listCmd(cmd) {
+  let el = selId && findEl(selId); if (!el || el.type !== 'text') return;
+  if (!editingText()) { startEdit(el.id); const x = elDom(el.id).querySelector('.txt'); const r = document.createRange(); r.selectNodeContents(x); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  document.execCommand(cmd);
+}
+function center(w, h) { return { x: Math.round((W - w) / 2), y: Math.round((H - h) / 2) }; }
+function addEl(el) { stopEdit(); pushUndo(); slide().els.push(el); rerenderAllStage(); select(el.id); markDirty(); thumbSoon(); return el; }
+function rerenderAllStage() { const keepSel = selId; renderStage(); selId = keepSel; drawSel(); updateToolbar(); }
+function addShape(shape) { const line = shape === 'line', w = line ? 360 : 300, h = line ? 24 : (shape === 'arrow' ? 160 : 300), p = center(w, h); addEl(Sh(shape, p.x, p.y, w, h, line ? { fill: '', stroke: 'text', sw: 6 } : {})); }
+const ACTS = {
+  undo, redo,
+  addText: () => { const p = center(600, 110); const el = addEl(Tx('body', p.x, p.y, 600, 110, 36)); startEdit(el.id); },
+  addTable: () => { const p = center(840, 300); addEl(Tb(p.x, p.y, 840, 300, [['Kop 1', 'Kop 2', 'Kop 3'], ['', '', ''], ['', '', '']])); },
+  addChart: () => { const p = center(860, 460); const el = addEl(Ch(p.x, p.y, 860, 460, 'bar', [{ l: 'A', v: 12 }, { l: 'B', v: 20 }, { l: 'C', v: 16 }, { l: 'D', v: 28 }])); openChartEdit(el); },
+  imgUpload: () => { imgMode = 'new'; $('imgFile').click(); },
+  imgUrl: () => { const u = prompt('Plak de link naar een afbeelding (https://...):'); if (u && /^https?:\/\//i.test(u.trim())) addImage(u.trim()); else if (u) alert('Gebruik een link die begint met https://'); },
+  imgReplace: () => replaceImage(),
+  imgFit: () => { const el = findEl(selId); if (el) setProp('fit', el.fit === 'contain' ? 'cover' : 'contain'); },
+  bold: () => cmdOrProp('bold', 'bold'), italic: () => cmdOrProp('italic', 'italic'), underline: () => cmdOrProp('underline', 'underline'),
+  bullets: () => listCmd('insertUnorderedList'), numbers: () => listCmd('insertOrderedList'),
+  alL: () => setProp('align', 'left'), alC: () => setProp('align', 'center'), alR: () => setProp('align', 'right'),
+  noFill: () => setProp('fill', ''),
+  rowAdd: () => tableOp(el => el.rows.push(el.rows[0].map(() => ''))),
+  colAdd: () => tableOp(el => el.rows.forEach((r, i) => r.push(i === 0 && el.head ? 'Kop ' + (r.length + 1) : ''))),
+  rowDel: () => tableOp(el => { if (el.rows.length > 1) el.rows.pop(); }),
+  colDel: () => tableOp(el => { if (el.rows[0].length > 1) el.rows.forEach(r => r.pop()); }),
+  tblHead: () => tableOp(el => { el.head = !el.head; }),
+  chartEdit: () => { const el = findEl(selId); if (el) openChartEdit(el); },
+  front: () => arrange(1), back: () => arrange(-1),
+  dupEl: () => dupEl(), delEl: () => delEl(),
+  bgReset: () => { pushUndo(); slide().bg = ''; renderStage(); thumbSoon(); markDirty(); }
+};
+document.querySelectorAll('[data-act]').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { const f = ACTS[b.dataset.act]; if (f) f(); }); });
+document.querySelectorAll('[data-shape]').forEach(b => b.addEventListener('click', () => addShape(b.dataset.shape)));
+$('fontSel').onchange = e => setProp('font', e.target.value);
+$('sizeSel').onchange = e => setProp('fontSize', +e.target.value);
+$('colorPick').addEventListener('change', e => { const el = editingText(); const s = getSelection(); if (el && s.rangeCount && !s.isCollapsed) { document.execCommand('foreColor', false, e.target.value); } else setProp('color', e.target.value); });
+$('boxFill').addEventListener('change', e => setProp('fill', e.target.value));
+$('fillPick').addEventListener('change', e => setProp('fill', e.target.value));
+$('strokePick').addEventListener('change', e => { const el = findEl(selId); if (!el) return; pushUndo(); el.stroke = e.target.value; if (!el.sw) el.sw = 5; rerenderEl(el); drawSel(); markDirty(); thumbSoon(); updateToolbar(); });
+$('strokeW').onchange = e => { const el = findEl(selId); if (!el) return; pushUndo(); el.sw = +e.target.value; if (!el.sw) el.stroke = ''; else if (!el.stroke) el.stroke = 'text'; rerenderEl(el); drawSel(); markDirty(); thumbSoon(); updateToolbar(); };
+function tableOp(fn) { const el = findEl(selId); if (!el || el.type !== 'table') return; stopEdit(); pushUndo(); fn(el); rerenderEl(el); drawSel(); markDirty(); thumbSoon(); updateToolbar(); }
+function arrange(dir) { const s = slide(), i = s.els.findIndex(e => e.id === selId); if (i < 0) return; stopEdit(); pushUndo(); const [e] = s.els.splice(i, 1); if (dir > 0) s.els.push(e); else s.els.unshift(e); rerenderAllStage(); markDirty(); thumbSoon(); }
+function dupEl() { const el = findEl(selId); if (!el) return; const c = JSON.parse(JSON.stringify(el)); c.id = uid(); c.x += 24; c.y += 24; addEl(c); }
+function delEl() { const s = slide(), i = s.els.findIndex(e => e.id === selId); if (i < 0) return; editId = null; pushUndo(); s.els.splice(i, 1); selId = null; rerenderAllStage(); markDirty(); thumbSoon(); }
+
+/* ---------- Afbeeldingen ---------- */
+let imgMode = 'new';
+function replaceImage() { const u = prompt('Plak een link naar een afbeelding, of laat leeg en klik OK om er een te uploaden:', ''); if (u === null) return; if (u.trim()) { if (!/^https?:\/\//i.test(u.trim())) return alert('Gebruik een link die begint met https://'); const el = findEl(selId); if (el) setProp('src', u.trim()); } else { imgMode = 'replace'; $('imgFile').click(); } }
+function compressImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const m = 1600, r = Math.min(1, m / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); const png = file.type === 'image/png' && file.size < 400000; res({ src: c.toDataURL(png ? 'image/png' : 'image/jpeg', .85), w: c.width, h: c.height }); };
+    img.onerror = () => rej(new Error('Kan afbeelding niet lezen')); img.src = url;
+  });
+}
+function addImage(src, nw, nh) {
+  const place = (iw, ih) => { const r = Math.min(640 / iw, 460 / ih, 1.5), w = Math.round(iw * r), h = Math.round(ih * r), p = center(w, h); addEl(Im(p.x, p.y, w, h, src)); };
+  if (nw && nh) return place(nw, nh);
+  const im = new Image(); im.onload = () => place(im.naturalWidth || 640, im.naturalHeight || 400); im.onerror = () => { place(640, 400); toast('Afbeelding kon niet geladen worden, controleer de link'); }; im.src = src;
+}
+$('imgFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const r = await compressImage(f); if (r.src.length > 2500000) toast('Let op: grote afbeelding, opslaan kan traag zijn');
+    if (imgMode === 'replace' && selId && findEl(selId) && findEl(selId).type === 'image') setProp('src', r.src); else addImage(r.src, r.w, r.h);
+  } catch (err) { alert('Deze afbeelding kon niet worden gelezen.'); }
+};
+
+/* ---------- Grafiek bewerken ---------- */
+let chartTarget = null;
+function openChartEdit(el) { chartTarget = el.id; $('chartKind').value = el.kind || 'bar'; $('chartData').value = (el.data || []).map(d => d.l + ';' + String(d.v).replace('.', ',')).join('\n'); openModal('chartModal'); setTimeout(() => $('chartData').focus(), 50); }
+$('chartSave').onclick = () => {
+  const el = findEl(chartTarget); if (!el) return closeModals();
+  const data = $('chartData').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const p = l.split(/;|\t/); const v = parseFloat(String(p[1] || '').trim().replace(',', '.')); return { l: (p[0] || '').trim(), v }; }).filter(d => d.l && isFinite(d.v));
+  pushUndo(); el.kind = $('chartKind').value; el.data = data; closeModals(); rerenderEl(el); drawSel(); markDirty(); thumbSoon();
+};
+
+/* ---------- Thema- en lay-outmenu ---------- */
+function buildThemeMenu() {
+  $('themeMenu').innerHTML = Object.keys(THEMES).map(k => { const t = THEMES[k]; return '<button data-th="' + k + '"><span class="swatch" style="background:' + t.bg + ';box-shadow:inset -7px 0 0 ' + t.accent + '"></span>' + t.name + (pres && pres.theme === k ? ' \u2713' : '') + '</button>'; }).join('');
+}
+$('themeMenu').addEventListener('click', e => { const b = e.target.closest('[data-th]'); if (!b || readOnly) return; stopEdit(); pushUndo(); pres.theme = b.dataset.th; renderAll(); markDirty(); toast('Thema: ' + theme().name); });
+$('layoutMenu').innerHTML = Object.keys(LAYOUTS).map(k => '<button data-lay="' + k + '">' + LAYOUTS[k].name + '</button>').join('');
+$('layoutMenu').addEventListener('click', e => { const b = e.target.closest('[data-lay]'); if (b) addSlide(b.dataset.lay); });
+$('addSlideBtn').onclick = () => addSlide(slide() && slide().layout && slide().layout !== 'titel' ? slide().layout : 'inhoud');
+
+/* ---------- Dia's ---------- */
+function goSlide(i) { if (!pres) return; stopEdit(); cur = Math.max(0, Math.min(pres.slides.length - 1, i)); selId = null; renderStage(); setActiveThumb(); }
+function cloneSlide(s) { const c = JSON.parse(JSON.stringify(s)); c.id = uid(); c.els.forEach(e => e.id = uid()); return c; }
+function addSlide(layout) { if (readOnly) return; stopEdit(); pushUndo(); pres.slides.splice(cur + 1, 0, newSlide(layout)); cur++; selId = null; renderAll(); markDirty(); }
+function dupSlide(i) { stopEdit(); pushUndo(); pres.slides.splice(i + 1, 0, cloneSlide(pres.slides[i])); cur = i + 1; selId = null; renderAll(); markDirty(); }
+function delSlide(i) { if (pres.slides.length === 1) return toast('Een presentatie heeft minstens \u00e9\u00e9n dia'); stopEdit(); pushUndo(); pres.slides.splice(i, 1); if (cur >= i && cur > 0) cur--; selId = null; renderAll(); markDirty(); toast('Dia verwijderd (Ctrl+Z om terug te halen)'); }
+function moveSlide(from, to) { if (to > from) to--; if (to === from || from < 0) return; stopEdit(); pushUndo(); const [s] = pres.slides.splice(from, 1); pres.slides.splice(to, 0, s); cur = to; selId = null; renderAll(); markDirty(); }
+$('notes').addEventListener('input', () => { if (!pres || readOnly) return; slide().notes = $('notes').value; markDirty(); });
+$('bgPick').addEventListener('change', e => { if (!pres || readOnly) return; pushUndo(); slide().bg = e.target.value; renderStage(); thumbSoon(); markDirty(); });
+$('transSel').onchange = e => { if (!pres || readOnly) return; slide().trans = e.target.value; markDirty(); toast('Overgang ingesteld voor deze dia'); };
+
+/* ---------- Nieuwe presentatie ---------- */
+let pickTheme = 'licht', pickTpl = 'leeg';
+$('themePick').innerHTML = Object.keys(THEMES).map(k => { const t = THEMES[k]; return '<button data-pt="' + k + '"' + (k === 'licht' ? ' class="on"' : '') + '><div class="tprev" style="background:' + t.bg + '"><i style="background:' + t.text + '"></i><u style="background:' + t.accent + '"></u><s style="background:' + t.sub + '"></s></div><b>' + t.name + '</b></button>'; }).join('');
+$('themePick').addEventListener('click', e => { const b = e.target.closest('[data-pt]'); if (!b) return; pickTheme = b.dataset.pt; [...$('themePick').children].forEach(x => x.classList.toggle('on', x === b)); });
+$('tplPick').addEventListener('click', e => { const b = e.target.closest('[data-tpl]'); if (!b) return; pickTpl = b.dataset.tpl; [...$('tplPick').children].forEach(x => x.classList.toggle('on', x === b)); });
+$('newBtn').onclick = () => openModal('tplModal');
+$('emptyNew').onclick = () => openModal('tplModal');
+$('createBtn').onclick = async () => {
+  closeModals(); stopEdit(); await saveNow();
+  const title = pickTpl === 'spreekbeurt' ? 'Spreekbeurt' : pickTpl === 'project' ? 'Projectpresentatie' : 'Naamloze presentatie';
+  const data = { theme: pickTheme, slides: TEMPLATES[pickTpl]() };
+  const { data: row, error } = await sb.from('presentations').insert({ title, data }).select(FIELDS).single();
+  if (error) return alert('Kon geen presentatie maken: ' + error.message);
+  items.unshift(row); view = 'list'; await openItem(row.id); document.body.classList.remove('side-open');
+};
+
+/* ============ PRESENTEREN ============ */
+let pIdx = 0, pActive = false, pEnded = false, pSpeaker = null, pStart = 0, pTick = null, pHide = null;
+function startPresent(from, speaker) {
+  if (!pres) return; stopEdit(); saveNow();
+  pActive = true; pEnded = false; pIdx = Math.max(0, Math.min(from, pres.slides.length - 1));
+  $('present').classList.remove('hidden'); $('presBlack').classList.add('hidden');
+  try { if ($('present').requestFullscreen) $('present').requestFullscreen().catch(() => {}); } catch (e) {}
+  pStart = Date.now(); clearInterval(pTick); pTick = setInterval(tickTimer, 1000);
+  if (speaker) openSpeaker();
+  showPres(true);
+}
+function fitPres() { const h = $('presHolder'), s = h.firstChild; if (!s) return; const sc = Math.min(window.innerWidth / W, window.innerHeight / H); h.style.width = W * sc + 'px'; h.style.height = H * sc + 'px'; s.style.transform = 'scale(' + sc + ')'; }
+function showPres(anim) {
+  const h = $('presHolder'); h.innerHTML = '';
+  $('presEnd').classList.toggle('hidden', !pEnded); h.classList.toggle('hidden', pEnded);
+  if (!pEnded) {
+    h.append(slideEl(pres.slides[pIdx])); fitPres();
+    h.classList.remove('an-fade', 'an-slide', 'an-zoom'); void h.offsetWidth;
+    const tr = pres.slides[pIdx].trans; if (anim && tr && tr !== 'none') h.classList.add('an-' + tr);
+  }
+  $('pCount').textContent = (pIdx + 1) + ' / ' + pres.slides.length;
+  updateSpeaker();
+}
+function nextP() { if (pEnded) return exitPresent(); if (pIdx < pres.slides.length - 1) { pIdx++; showPres(true); } else { pEnded = true; showPres(false); } }
+function prevP() { if (pEnded) { pEnded = false; showPres(false); return; } if (pIdx > 0) { pIdx--; showPres(true); } }
+function exitPresent() {
+  if (!pActive) return; pActive = false;
+  $('present').classList.add('hidden'); $('presBlack').classList.add('hidden');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (pSpeaker && !pSpeaker.closed) pSpeaker.close(); pSpeaker = null; clearInterval(pTick);
+  goSlide(pIdx);
+}
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && pActive && !(pSpeaker && !pSpeaker.closed)) exitPresent(); });
+window.addEventListener('resize', () => { if (pActive) fitPres(); });
+$('present').addEventListener('mousemove', () => { $('present').classList.add('cursor'); clearTimeout(pHide); pHide = setTimeout(() => $('present').classList.remove('cursor'), 2200); });
+$('present').addEventListener('click', e => { if (e.target.closest('#presBar')) return; if (!$('presBlack').classList.contains('hidden')) { $('presBlack').classList.add('hidden'); return; } nextP(); });
+$('present').addEventListener('contextmenu', e => { e.preventDefault(); prevP(); });
+$('pPrev').onclick = e => { e.stopPropagation(); prevP(); };
+$('pNext').onclick = e => { e.stopPropagation(); nextP(); };
+$('pExit').onclick = e => { e.stopPropagation(); exitPresent(); };
+function presKey(e) {
+  const k = e.key;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter', 'n', 'N'].indexOf(k) >= 0) { e.preventDefault(); nextP(); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p', 'P'].indexOf(k) >= 0) { e.preventDefault(); prevP(); }
+  else if (k === 'Home') { e.preventDefault(); pEnded = false; pIdx = 0; showPres(true); }
+  else if (k === 'End') { e.preventDefault(); pEnded = false; pIdx = pres.slides.length - 1; showPres(true); }
+  else if (k === 'b' || k === 'B' || k === '.') { e.preventDefault(); $('presBlack').classList.toggle('hidden'); }
+  else if (k === 'Escape') { e.preventDefault(); exitPresent(); }
+}
+function tickTimer() { if (!pSpeaker || pSpeaker.closed) return; const s = Math.floor((Date.now() - pStart) / 1000), el = pSpeaker.document.getElementById('timer'); if (el) el.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function openSpeaker() {
+  const w = window.open('', 'jfspeaker', 'width=1150,height=700');
+  if (!w) { toast('Pop-up geblokkeerd: sta pop-ups toe voor de sprekersweergave'); return; }
+  pSpeaker = w;
+  const css = 'body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif;display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:auto 1fr;height:100vh;gap:16px;padding:16px;box-sizing:border-box}.top{grid-column:1/3;display:flex;align-items:center;gap:12px}#timer{font-size:34px;font-variant-numeric:tabular-nums;color:#fcc419;font-weight:700}button{background:#2a2a2e;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:15px;cursor:pointer}button:hover{background:#3a3a40}#count{font-size:18px;color:#bbb}.col{display:flex;flex-direction:column;min-height:0}.lbl{font-size:13px;color:#999;margin-bottom:6px}#cur,#nxt{position:relative;background:#000;border-radius:8px;overflow:hidden;flex:0 0 auto}#nxt{opacity:.85}#notes{flex:1;font-size:22px;line-height:1.5;white-space:pre-wrap;overflow:auto;background:#1b1b1f;border-radius:8px;padding:16px}.end{display:flex;align-items:center;justify-content:center;color:#777;font-size:18px}';
+  w.document.open();
+  w.document.write('<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Sprekersweergave - jf.presentations</title><style>' + css + $('slideCss').textContent + '</style></head><body><div class="top"><span id="timer">00:00</span><button id="reset">Timer opnieuw</button><span style="flex:1"></span><span id="count"></span><button id="prev">&#8592; Vorige</button><button id="next">Volgende &#8594;</button><button id="stop">Stoppen</button></div><div class="col"><div class="lbl">Huidige dia</div><div id="cur"></div></div><div class="col"><div class="lbl">Volgende dia</div><div id="nxt"></div><div class="lbl" style="margin-top:14px">Notities</div><div id="notes"></div></div></body></html>');
+  w.document.close();
+  const d = w.document;
+  d.getElementById('next').onclick = nextP; d.getElementById('prev').onclick = prevP;
+  d.getElementById('stop').onclick = exitPresent; d.getElementById('reset').onclick = () => { pStart = Date.now(); tickTimer(); };
+  w.addEventListener('keydown', presKey); w.addEventListener('resize', updateSpeaker);
+  setTimeout(updateSpeaker, 60);
+}
+function placeSlide(box, s) {
+  box.innerHTML = ''; const bw = box.clientWidth || 500, sc = bw / W; box.style.height = H * sc + 'px';
+  if (!s) { box.className = 'end'; box.textContent = 'Einde van de presentatie'; return; }
+  box.className = ''; const el = slideEl(s); el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0'; el.style.transformOrigin = '0 0'; el.style.transform = 'scale(' + sc + ')'; box.append(el);
+}
+function updateSpeaker() {
+  if (!pSpeaker || pSpeaker.closed) return; const d = pSpeaker.document; if (!d.getElementById('cur')) return;
+  placeSlide(d.getElementById('cur'), pEnded ? null : pres.slides[pIdx]);
+  placeSlide(d.getElementById('nxt'), pEnded ? null : pres.slides[pIdx + 1]);
+  d.getElementById('notes').textContent = pEnded ? '' : (pres.slides[pIdx].notes || '(geen notities bij deze dia)');
+  d.getElementById('count').textContent = 'Dia ' + (pIdx + 1) + ' van ' + pres.slides.length;
+  tickTimer();
+}
+$('playStart').onclick = () => startPresent(0, false);
+$('playCur').onclick = () => startPresent(cur, false);
+$('playSpeaker').onclick = () => startPresent(cur, true);
+
+/* ============ EXPORTEREN ============ */
+function fileName() { return ($('title').value.trim() || 'presentatie').replace(/[\\/:*?"<>|]/g, ''); }
+$('expPdf').onclick = () => {
+  if (!pres) return; stopEdit();
+  const a = $('printArea'); a.innerHTML = '';
+  pres.slides.forEach(s => { const p = document.createElement('div'); p.className = 'print-slide'; p.append(slideEl(s)); a.append(p); });
+  setTimeout(() => { window.print(); setTimeout(() => { a.innerHTML = ''; }, 1500); }, 400);
+};
+function rgbHex(c) { if (!c) return null; if (c[0] === '#') return c.length === 4 ? '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3] : c; const m = c.match(/\d+/g); if (!m || m.length < 3) return null; return '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join(''); }
+function htmlRuns(html) {
+  const div = document.createElement('div'); div.innerHTML = clean(html);
+  if (!div.textContent.trim()) return [];
+  function collect(node, fmt, runs) {
+    if (node.nodeType === 3) { if (node.nodeValue) runs.push({ text: node.nodeValue, options: Object.assign({}, fmt) }); return; }
+    if (node.nodeType !== 1) return;
+    const tg = node.tagName, f = Object.assign({}, fmt);
+    if (tg === 'BR') { if (runs.length) runs[runs.length - 1].options.breakLine = true; else runs.push({ text: '', options: { breakLine: true } }); return; }
+    if (tg === 'B' || tg === 'STRONG') f.bold = true;
+    if (tg === 'I' || tg === 'EM') f.italic = true;
+    if (tg === 'U') f.underline = { style: 'sng' };
+    const c = node.getAttribute('color') || (node.style && node.style.color); const h = rgbHex(c); if (h) f.color = h.slice(1).toUpperCase();
+    if (node.style && (node.style.fontWeight === 'bold' || +node.style.fontWeight >= 600)) f.bold = true;
+    if (node.style && node.style.fontStyle === 'italic') f.italic = true;
+    node.childNodes.forEach(ch => collect(ch, f, runs));
+  }
+  const blocks = []; let inline = [];
+  const flush = () => { if (inline.length) { blocks.push({ runs: inline }); inline = []; } };
+  div.childNodes.forEach(ch => {
+    if (ch.nodeType === 1 && (ch.tagName === 'UL' || ch.tagName === 'OL')) { flush(); [...ch.children].forEach(li => { const r = []; collect(li, {}, r); blocks.push({ runs: r, bullet: ch.tagName === 'OL' ? { type: 'number' } : true }); }); }
+    else if (ch.nodeType === 1 && /^(P|DIV|H[1-6]|BLOCKQUOTE)$/.test(ch.tagName)) { flush(); const r = []; collect(ch, {}, r); blocks.push({ runs: r }); }
+    else collect(ch, {}, inline);
+  });
+  flush();
+  const out = [];
+  blocks.forEach((b, bi) => { if (!b.runs.length) b.runs = [{ text: '', options: {} }]; b.runs.forEach((r, ri) => { if (b.bullet) r.options.bullet = b.bullet; if (ri === b.runs.length - 1 && bi < blocks.length - 1) r.options.breakLine = true; out.push(r); }); });
+  return out;
+}
+function fontName(f) { const n = (f || '').split(',')[0].replace(/['"]/g, '').trim(); return !n || n === 'system-ui' || n === 'inherit' ? 'Calibri' : n; }
+async function buildPptx(skipUrl) {
+  const p = new PptxGenJS(); p.layout = 'LAYOUT_16x9'; p.title = $('title').value || 'Presentatie';
+  const t = theme(), IN = v => v / 128, hx = c => (rgbHex(col(c, t)) || '#000000').slice(1).toUpperCase();
+  pres.slides.forEach(s => {
+    const ps = p.addSlide(); ps.background = { color: hx(s.bg || t.bg) }; if (s.notes) ps.addNotes(s.notes);
+    s.els.forEach(e => {
+      const base = { x: IN(e.x), y: IN(e.y), w: IN(e.w), h: IN(e.h) }; if (e.rot) base.rotate = e.rot;
+      if (e.type === 'text') { const runs = htmlRuns(e.html); if (!runs.length) return; ps.addText(runs, Object.assign({}, base, { fontSize: Math.round(e.fontSize * .75), fontFace: fontName(e.font || t.font), color: hx(e.color), bold: !!e.bold, italic: !!e.italic, underline: e.underline ? { style: 'sng' } : undefined, align: e.align || 'left', valign: 'top', margin: 6, fill: e.fill ? { color: hx(e.fill) } : undefined })); }
+      else if (e.type === 'shape') {
+        const map = { rect: p.ShapeType.rect, round: p.ShapeType.roundRect, ellipse: p.ShapeType.ellipse, triangle: p.ShapeType.triangle, arrow: p.ShapeType.rightArrow, star: p.ShapeType.star5, line: p.ShapeType.line };
+        const o = Object.assign({}, base);
+        if (e.shape === 'line') { o.y = IN(e.y + e.h / 2); o.h = 0; o.line = { color: hx(e.stroke || e.fill || 'text'), width: Math.max(e.sw || 0, 6) * .75 }; }
+        else { o.fill = e.fill ? { color: hx(e.fill) } : { color: 'FFFFFF', transparency: 100 }; o.line = e.stroke && e.sw ? { color: hx(e.stroke), width: e.sw * .75 } : { type: 'none' }; }
+        ps.addShape(map[e.shape] || p.ShapeType.rect, o);
+      }
+      else if (e.type === 'image') { if (!e.src || (skipUrl && e.src.indexOf('data:') !== 0)) return; const o = Object.assign({}, base, e.src.indexOf('data:') === 0 ? { data: e.src } : { path: e.src }); o.sizing = { type: e.fit === 'contain' ? 'contain' : 'cover', w: base.w, h: base.h }; ps.addImage(o); }
+      else if (e.type === 'table') { const rows = e.rows.map((r, i) => r.map(c => ({ text: c, options: i === 0 && e.head ? { bold: true, fill: { color: hx('accent') }, color: '111111' } : {} }))); ps.addTable(rows, Object.assign({}, base, { fontSize: Math.round((e.fontSize || 24) * .75), color: hx('text'), border: { type: 'solid', pt: 1, color: hx('sub') }, valign: 'middle' })); }
+      else if (e.type === 'chart') { if (!e.data || !e.data.length) return; const type = e.kind === 'pie' ? p.ChartType.pie : e.kind === 'line' ? p.ChartType.line : p.ChartType.bar; ps.addChart(type, [{ name: 'Waarde', labels: e.data.map(d => d.l), values: e.data.map(d => d.v) }], Object.assign({}, base, { chartColors: [t.accent].concat(PAL).map(c => c.slice(1)), showLegend: e.kind === 'pie', legendPos: 'r', showValue: true, catAxisLabelColor: hx('text'), valAxisLabelColor: hx('sub'), dataLabelColor: hx('text'), legendColor: hx('text') })); }
+    });
+  });
+  await p.writeFile({ fileName: fileName() + '.pptx' });
+}
+$('expPptx').onclick = async () => {
+  if (!pres) return; stopEdit();
+  try { await loadScript(PPTX_URL); } catch (e) { return alert('Kon de PowerPoint-module niet laden. Ben je online?'); }
+  toast('PowerPoint-bestand maken...');
+  try { await buildPptx(false); }
+  catch (e) { try { await buildPptx(true); toast('Gemaakt, maar sommige afbeeldingen via links konden niet mee'); } catch (e2) { alert('Exporteren mislukt.'); } }
+};
+
+/* ============ SNELTOETSEN ============ */
+document.addEventListener('keydown', e => {
+  if (pActive) { presKey(e); return; }
+  if (document.querySelector('.modal-bg:not(.hidden)')) { if (e.key === 'Escape') closeModals(); return; }
+  if (!pres || $('presView').classList.contains('hidden') || $('app').classList.contains('hidden')) return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key, kl = k.toLowerCase();
+  if (mod && kl === 's') { e.preventDefault(); saveNow(); return; }
+  if (k === 'F5') { e.preventDefault(); startPresent(e.shiftKey ? cur : 0, false); return; }
+  if (editId) return;
+  const ae = document.activeElement;
+  if (ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return;
+  if (readOnly) { if (k === 'ArrowDown' || k === 'ArrowRight' || k === 'PageDown') { e.preventDefault(); goSlide(cur + 1); } else if (k === 'ArrowUp' || k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); goSlide(cur - 1); } return; }
+  if (mod) {
+    if (kl === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (kl === 'y') { e.preventDefault(); redo(); }
+    else if (kl === 'd') { e.preventDefault(); if (selId) dupEl(); else dupSlide(cur); }
+    else if (kl === 'c' && selId) { clipEl = JSON.parse(JSON.stringify(findEl(selId))); toast('Gekopieerd'); }
+    else if (kl === 'x' && selId) { clipEl = JSON.parse(JSON.stringify(findEl(selId))); delEl(); }
+    else if (kl === 'v' && clipEl) { e.preventDefault(); const c = JSON.parse(JSON.stringify(clipEl)); c.id = uid(); c.x += 20; c.y += 20; clipEl.x += 20; clipEl.y += 20; addEl(c); }
+    else if (kl === 'm') { e.preventDefault(); addSlide('inhoud'); }
+    else if (k === '/') { e.preventDefault(); openModal('helpModal'); }
+    return;
+  }
+  if (e.altKey && kl === 'n') { e.preventDefault(); openModal('tplModal'); return; }
+  if ((k === 'Delete' || k === 'Backspace') && selId) { e.preventDefault(); delEl(); return; }
+  if (k === 'Escape') { select(null); return; }
+  if (k === 'Enter' && selId) { const el = findEl(selId); if (el && (el.type === 'text' || el.type === 'table')) { e.preventDefault(); startEdit(el.id); } return; }
+  const mv = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[k];
+  if (mv) {
+    e.preventDefault();
+    if (selId) { const el = findEl(selId), st = e.shiftKey ? 10 : 1; if (!e.repeat) pushUndo(); el.x += mv[0] * st; el.y += mv[1] * st; const d = elDom(el.id); if (d) { d.style.left = el.x + 'px'; d.style.top = el.y + 'px'; } drawSel(); markDirty(); thumbSoon(); }
+    else goSlide(cur + (mv[0] + mv[1] > 0 ? 1 : -1));
+    return;
+  }
+  if (k === 'PageDown') { e.preventDefault(); goSlide(cur + 1); } else if (k === 'PageUp') { e.preventDefault(); goSlide(cur - 1); }
+});
+
+init();
+</script>
+</body>
+</html>
