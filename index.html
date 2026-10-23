@@ -131,6 +131,10 @@ aside{border-right:1px solid var(--line);background:var(--panel);display:flex;fl
 .pick-grid button{background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px;text-align:left;color:var(--text)}
 .pick-grid button:hover{border-color:var(--muted)}
 .pick-grid button.on{border-color:var(--accent)}
+.imp-row{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border:2px dashed var(--line);border-radius:10px;width:100%;background:none;color:var(--text);text-align:left}
+.imp-row:hover{border-color:var(--accent)}
+.imp-row span{color:var(--muted);font-size:13px}
+.dropzone{position:fixed;inset:12px;border:3px dashed var(--accent);border-radius:18px;background:var(--tint);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:var(--accent);z-index:150;pointer-events:none}
 .pick-grid b{display:block;font-size:14px}
 .pick-grid span{font-size:12px;color:var(--muted)}
 .tprev{height:54px;border-radius:6px;margin-bottom:8px;position:relative;overflow:hidden;border:1px solid rgba(0,0,0,.1)}
@@ -267,6 +271,8 @@ body>*:not(#printArea){display:none!important}
   <div class="main">
     <aside id="sidebar">
       <button class="btn full" id="newBtn">+ Nieuwe presentatie</button>
+      <button class="icon-btn edit-only" id="importBtn">&#8679; PowerPoint importeren</button>
+      <input type="file" id="importFile" accept=".pptx,.ppt" hidden>
       <div class="side-row">
         <input class="inp" id="search" placeholder="Zoeken...">
         <select class="inp" id="sortSel" title="Sorteren">
@@ -436,6 +442,7 @@ body>*:not(#printArea){display:none!important}
       <button data-tpl="spreekbeurt"><b>Spreekbeurt</b><span>Inleiding, 3 onderwerpen, conclusie, vragen</span></button>
       <button data-tpl="project"><b>Projectpresentatie</b><span>Doel, aanpak, planning, resultaat</span></button>
     </div>
+    <button class="imp-row" id="tplImport"><b>&#8679; PowerPoint-bestand importeren</b><span>Open een .pptx van je computer (of sleep het hierheen)</span></button>
     <div class="modal-foot"><button class="btn sec" data-close>Annuleren</button><button class="btn" id="createBtn">Maken</button></div>
   </div>
 </div>
@@ -669,7 +676,7 @@ function renderList() {
   const tc = items.filter(d => d.deleted_at).length;
   $('trashBtn').textContent = inTrash ? '\u2190 Terug naar presentaties' : '\uD83D\uDDD1 Prullenbak (' + tc + ')';
   $('emptyTrash').classList.toggle('hidden', !inTrash || !tc);
-  $('newBtn').classList.toggle('hidden', inTrash);
+  $('newBtn').classList.toggle('hidden', inTrash); $('importBtn').classList.toggle('hidden', inTrash);
   if (!list.length) { const div = document.createElement('div'); div.className = 'empty-list'; div.textContent = inTrash ? 'De prullenbak is leeg.' : items.some(d => !d.deleted_at) ? 'Niks gevonden.' : 'Nog geen presentaties. Maak er een!'; ul.append(div); return; }
   const pinned = inTrash ? [] : list.filter(d => d.pinned), rest = inTrash ? list : list.filter(d => !d.pinned);
   if (pinned.length) { addHead(ul, 'Favorieten'); pinned.forEach(d => ul.append(item(d, false))); addHead(ul, 'Presentaties'); }
@@ -834,6 +841,7 @@ function renderEl(e, t) {
     x.style.fontWeight = e.bold ? '700' : '400'; x.style.fontStyle = e.italic ? 'italic' : ''; x.style.textDecoration = e.underline ? 'underline' : '';
     if (e.font) x.style.fontFamily = e.font;
     if (e.fill) { x.style.background = col(e.fill, t); x.style.borderRadius = '10px'; }
+    if (e.valign === 'middle' || e.valign === 'bottom') { x.style.display = 'flex'; x.style.flexDirection = 'column'; x.style.justifyContent = e.valign === 'middle' ? 'center' : 'flex-end'; }
     d.append(x); if (!x.textContent.trim() && !x.querySelector('img')) d.classList.add('empty');
   } else if (e.type === 'shape') d.innerHTML = shapeSvg(e, t);
   else if (e.type === 'image') {
@@ -1238,6 +1246,300 @@ $('createBtn').onclick = async () => {
   items.unshift(row); view = 'list'; await openItem(row.id); document.body.classList.remove('side-open');
 };
 
+/* ============ IMPORTEREN (PowerPoint .pptx) ============ */
+const JSZIP_URL = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+async function readPptx(file) {
+  await loadScript(JSZIP_URL);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const kids = (el, n) => el ? [...el.children].filter(c => c.localName === n) : [];
+  const kid = (el, n) => { if (!el) return null; for (const c of el.children) if (c.localName === n) return c; return null; };
+  const path = (el, ...ns) => { for (const n of ns) { el = kid(el, n); if (!el) return null; } return el; };
+  const all = (el, n) => el ? [...el.getElementsByTagNameNS('*', n)] : [];
+  const num = (el, a, d) => { const v = el && el.getAttribute(a); return v == null || v === '' ? d : +v; };
+  const rId = el => { if (!el) return null; for (const a of el.attributes) if (a.localName === 'embed' || (a.localName === 'id' && a.prefix === 'r')) return a.value; return null; };
+  const xmlCache = {};
+  const xml = p => { if (!(p in xmlCache)) xmlCache[p] = (async () => { const f = zip.file(p); return f ? new DOMParser().parseFromString(await f.async('text'), 'application/xml') : null; })(); return xmlCache[p]; };
+  const resolve = (dir, t) => { if (t[0] === '/') return t.slice(1); const parts = (dir + t).split('/'), out = []; parts.forEach(p => { if (p === '..') out.pop(); else if (p !== '.') out.push(p); }); return out.join('/'); };
+  const rels = async p => { const dir = p.replace(/[^/]+$/, ''), x = await xml(dir + '_rels/' + p.slice(dir.length) + '.rels'), m = {}; all(x, 'Relationship').forEach(r => { if (r.getAttribute('TargetMode') !== 'External') m[r.getAttribute('Id')] = { t: resolve(dir, r.getAttribute('Target')), type: r.getAttribute('Type') || '' }; }); return m; };
+  const relOfType = (rs, end) => { for (const k in rs) if (rs[k].type.endsWith(end)) return rs[k].t; return null; };
+
+  const presX = await xml('ppt/presentation.xml'); if (!presX) throw new Error('geen presentatie');
+  const presRels = await rels('ppt/presentation.xml');
+  const sz = path(presX.documentElement, 'sldSz'), CX = num(sz, 'cx', 12192000), CY = num(sz, 'cy', 6858000);
+  const S = Math.min(W / CX, H / CY), OX = (W - CX * S) / 2, OY = (H - CY * S) / 2, PT = 12700 * S;
+  const defText = path(presX.documentElement, 'defaultTextStyle');
+  const report = { skipped: 0, images: 0 };
+
+  /* ---- kleuren ---- */
+  function hexRgb(h) { return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+  function rgbHex(r) { return '#' + r.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join(''); }
+  function toHsl([r, g, b]) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; } return [h, s, l]; }
+  function fromHsl([h, s, l]) { if (!s) return [l * 255, l * 255, l * 255]; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return 255 * (t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p); }; return [f(h + 1 / 3), f(h), f(h - 1 / 3)]; }
+  const PRST = { black: '000000', white: 'ffffff', red: 'ff0000', green: '008000', blue: '0000ff', yellow: 'ffff00', gray: '808080', orange: 'ffa500' };
+  function clr(holder, ctx) {
+    if (!holder) return null;
+    const c = [...holder.children].find(x => /^(srgbClr|schemeClr|sysClr|prstClr|scrgbClr|hslClr)$/.test(x.localName)); if (!c) return null;
+    let h = null;
+    if (c.localName === 'srgbClr') h = c.getAttribute('val');
+    else if (c.localName === 'sysClr') h = c.getAttribute('lastClr') || (c.getAttribute('val') === 'window' ? 'ffffff' : '000000');
+    else if (c.localName === 'prstClr') h = PRST[c.getAttribute('val')] || '000000';
+    else if (c.localName === 'scrgbClr') h = rgbHex(['r', 'g', 'b'].map(k => num(c, k, 0) / 100000 * 255)).slice(1);
+    else if (c.localName === 'schemeClr') { let v = c.getAttribute('val'); if (v === 'phClr') return ctx && ctx.ph || null; v = (ctx.map[v] || v); h = ctx.scheme[v]; }
+    if (!h || !/^[0-9a-f]{6}$/i.test(h)) return null;
+    let rgb = hexRgb(h);
+    for (const m of c.children) {
+      const v = num(m, 'val', 0) / 100000;
+      if (m.localName === 'lumMod' || m.localName === 'lumOff') { const hsl = toHsl(rgb); hsl[2] = m.localName === 'lumMod' ? hsl[2] * v : hsl[2] + v; hsl[2] = Math.max(0, Math.min(1, hsl[2])); rgb = fromHsl(hsl); }
+      else if (m.localName === 'tint') rgb = rgb.map(x => x + (255 - x) * (1 - v));
+      else if (m.localName === 'shade') rgb = rgb.map(x => x * v);
+    }
+    return rgbHex(rgb);
+  }
+  const fillOf = (spPr, ctx) => { if (!spPr) return undefined; if (kid(spPr, 'noFill')) return null; const s = kid(spPr, 'solidFill'); if (s) return clr(s, ctx); const g = kid(spPr, 'gradFill'); if (g) { const gs = all(g, 'gs')[0]; return gs ? clr(gs, ctx) : undefined; } return undefined; };
+
+  /* ---- thema's en lagen ---- */
+  const masters = {};
+  async function masterCtx(p) {
+    if (masters[p]) return masters[p];
+    const x = await xml(p), rs = await rels(p), th = await xml(relOfType(rs, '/theme') || 'ppt/theme/theme1.xml');
+    const scheme = {}, cs = all(th, 'clrScheme')[0];
+    if (cs) [...cs.children].forEach(c => { const a = kid(c, 'srgbClr'), b = kid(c, 'sysClr'); scheme[c.localName] = a ? a.getAttribute('val') : b ? (b.getAttribute('lastClr') || '000000') : null; });
+    const map = { bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2' }, cm = path(x.documentElement, 'clrMap');
+    if (cm) for (const a of cm.attributes) map[a.localName] = a.value;
+    const font = n => { const f = all(th, n)[0], l = kid(f, 'latin'); return l ? l.getAttribute('typeface') : ''; };
+    const ts = path(x.documentElement, 'txStyles');
+    return masters[p] = { x, rs, p, ctx: { scheme, map }, fonts: { mj: font('majorFont'), mn: font('minorFont') }, title: kid(ts, 'titleStyle'), body: kid(ts, 'bodyStyle'), other: kid(ts, 'otherStyle') };
+  }
+  const tree = doc => path(doc.documentElement, 'cSld', 'spTree');
+  const phOf = el => { const nv = [...el.children].find(c => /^nv/.test(c.localName)), p = nv && path(nv, 'nvPr', 'ph'); return p ? { type: p.getAttribute('type') || 'body', idx: p.getAttribute('idx'), hasType: p.hasAttribute('type') } : null; };
+  function findPh(doc, ph) {
+    if (!doc) return null; const els = [...tree(doc).children].filter(e => phOf(e));
+    const same = t => t === ph.type || ((t === 'title' || t === 'ctrTitle') && (ph.type === 'title' || ph.type === 'ctrTitle'));
+    return (ph.idx != null && els.find(e => phOf(e).idx === ph.idx)) || els.find(e => same(phOf(e).type)) || (ph.type === 'body' || ph.type === 'obj' || ph.type === 'subTitle' ? els.find(e => phOf(e).type === 'body') : null) || null;
+  }
+
+  /* ---- tekststijlen ---- */
+  function fontName(tf, M) { if (!tf) return ''; if (tf === '+mj-lt') tf = M.fonts.mj; else if (tf === '+mn-lt') tf = M.fonts.mn; if (!tf || tf[0] === '+') return ''; return "'" + tf + "', sans-serif"; }
+  function rProps(r, M, ctx) { const o = {}; if (!r) return o; if (r.hasAttribute('sz')) o.sz = +r.getAttribute('sz') / 100; ['b', 'i'].forEach(k => { if (r.hasAttribute(k)) o[k] = r.getAttribute(k) === '1' || r.getAttribute(k) === 'true'; }); if (r.hasAttribute('u')) o.u = r.getAttribute('u') !== 'none'; const f = kid(r, 'solidFill'); if (f) { const c = clr(f, ctx); if (c) o.c = c; } const l = kid(r, 'latin'); if (l) { const n = fontName(l.getAttribute('typeface'), M); if (n) o.font = n; } return o; }
+  function pProps(p, M, ctx) { const o = {}; if (!p) return o; if (p.hasAttribute('algn')) o.algn = p.getAttribute('algn'); if (kid(p, 'buNone')) o.bu = ''; else if (kid(p, 'buAutoNum')) o.bu = 'ol'; else if (kid(p, 'buChar') || kid(p, 'buBlip')) o.bu = 'ul'; Object.assign(o, rProps(kid(p, 'defRPr'), M, ctx)); return o; }
+  const lvlOf = (lst, lvl, M, ctx) => lst ? pProps(kid(lst, 'lvl' + (lvl + 1) + 'pPr'), M, ctx) : {};
+
+  /* ---- afbeeldingen ---- */
+  function loadImg(blob, crop) {
+    return new Promise(res => {
+      const url = URL.createObjectURL(blob), im = new Image();
+      im.onload = () => {
+        try {
+          const cl = crop || {}, sx = im.width * (cl.l || 0), sy = im.height * (cl.t || 0), sw = Math.max(1, im.width * (1 - (cl.l || 0) - (cl.r || 0))), sh = Math.max(1, im.height * (1 - (cl.t || 0) - (cl.b || 0)));
+          const r = Math.min(1, 1600 / Math.max(sw, sh)), c = document.createElement('canvas'); c.width = Math.round(sw * r); c.height = Math.round(sh * r);
+          c.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+          res(/png|gif|svg/.test(blob.type) ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', .85));
+        } catch (e) { res(null); }
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); res(null); }; im.src = url;
+    });
+  }
+  const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml' };
+  async function imageFrom(rs, id, crop) {
+    const r = rs[id]; if (!r) return null; const ext = (r.t.split('.').pop() || '').toLowerCase(); if (!MIME[ext]) { report.skipped++; return null; }
+    const f = zip.file(r.t); if (!f) return null; const blob = new Blob([await f.async('uint8array')], { type: MIME[ext] });
+    const src = await loadImg(blob, crop); if (src) report.images++; return src;
+  }
+
+  /* ---- positie ---- */
+  function xfrmOf(el) { const sp = kid(el, 'spPr') || kid(el, 'grpSpPr'); return (sp && kid(sp, 'xfrm')) || kid(el, 'xfrm'); }
+  function boxOf(xf, T) {
+    const off = kid(xf, 'off'), ext = kid(xf, 'ext'); if (!off || !ext) return null;
+    let x = num(off, 'x', 0), y = num(off, 'y', 0), w = num(ext, 'cx', 0), h = num(ext, 'cy', 0);
+    for (const t of T) { x = t.ox + (x - t.cx) * t.sx; y = t.oy + (y - t.cy) * t.sy; w *= t.sx; h *= t.sy; }
+    return { x: Math.round(OX + x * S), y: Math.round(OY + y * S), w: Math.max(4, Math.round(w * S)), h: Math.max(4, Math.round(h * S)), rot: Math.round(num(xf, 'rot', 0) / 60000), flipV: xf.getAttribute('flipV') === '1', flipH: xf.getAttribute('flipH') === '1' };
+  }
+
+  /* ---- tekst naar html ---- */
+  function textEl(txBody, box, info) {
+    const { M, ctx, role, chain, fontRefC } = info;
+    const bodyPr = kid(txBody, 'bodyPr'), lst = kid(txBody, 'lstStyle');
+    const fit = bodyPr && kid(bodyPr, 'normAutofit'), scale = fit ? num(fit, 'fontScale', 100000) / 100000 : 1;
+    let anchor = bodyPr && bodyPr.getAttribute('anchor'); if (!anchor) for (const b of info.bodyChain) { const a = b && b.getAttribute('anchor'); if (a) { anchor = a; break; } }
+    const paras = kids(txBody, 'p'), out = []; let base = null, algns = new Set(), anyText = false;
+    paras.forEach(p => {
+      const pPr = kid(p, 'pPr'), lvl = num(pPr, 'lvl', 0);
+      const st = Object.assign({}, lvlOf(defText, lvl, M, ctx), lvlOf(chain.txStyle, lvl, M, ctx));
+      chain.lsts.forEach(l => Object.assign(st, lvlOf(l, lvl, M, ctx)));
+      if (fontRefC) st.c = fontRefC;
+      Object.assign(st, lvlOf(lst, lvl, M, ctx), pProps(pPr, M, ctx));
+      if (!st.font) st.font = fontName(role === 'title' ? '+mj-lt' : '+mn-lt', M);
+      const runs = []; let txt = '';
+      [...p.children].forEach(r => {
+        if (r.localName === 'br') { runs.push({ br: true }); return; }
+        if (r.localName !== 'r' && r.localName !== 'fld') return;
+        const t = (kid(r, 't') || {}).textContent || ''; if (!t) return;
+        const rp = Object.assign({}, st, rProps(kid(r, 'rPr'), M, ctx)); runs.push({ t, rp }); txt += t;
+      });
+      if (txt.trim()) anyText = true;
+      const first = runs.find(r => !r.br) || { rp: Object.assign({}, st, rProps(kid(p, 'endParaRPr'), M, ctx)) };
+      if (!base && txt.trim()) base = first.rp;
+      algns.add(st.algn || 'l');
+      out.push({ runs, st, lvl, bu: txt.trim() ? st.bu : '' });
+    });
+    if (!anyText) return null;
+    base = base || {};
+    const fs = Math.max(8, Math.round((base.sz || 18) * PT * scale)), color = base.c || '#000000', font = base.font || '';
+    const A = { l: 'left', ctr: 'center', r: 'right', just: 'justify', dist: 'justify' };
+    const oneAlign = algns.size === 1 ? A[[...algns][0]] || 'left' : null;
+    const runHtml = r => {
+      if (r.br) return '<br>';
+      let h = esc(r.t).replace(/\t/g, ' &nbsp; &nbsp;'); const rp = r.rp, css = [];
+      const px = Math.round((rp.sz || base.sz || 18) * PT * scale); if (Math.abs(px - fs) > 1) css.push('font-size:' + px + 'px');
+      if (rp.c && rp.c !== color) css.push('color:' + rp.c);
+      if (rp.font && rp.font !== font) css.push('font-family:' + rp.font.replace(/"/g, "'"));
+      if (css.length) h = '<span style="' + css.join(';') + '">' + h + '</span>';
+      if (rp.b) h = '<b>' + h + '</b>'; if (rp.i) h = '<i>' + h + '</i>'; if (rp.u) h = '<u>' + h + '</u>';
+      return h;
+    };
+    let html = '', open = null;
+    out.forEach(p => {
+      const inner = p.runs.map(runHtml).join('') || '<br>', al = !oneAlign && A[p.st.algn] && A[p.st.algn] !== 'left' ? 'text-align:' + A[p.st.algn] : '';
+      if (p.bu) { if (open !== p.bu) { if (open) html += '</' + open + '>'; html += '<' + p.bu + '>'; open = p.bu; } html += '<li' + (p.lvl || al ? ' style="' + [p.lvl ? 'margin-left:' + (p.lvl * 1.3) + 'em' : '', al].filter(Boolean).join(';') + '"' : '') + '>' + inner + '</li>'; }
+      else { if (open) { html += '</' + open + '>'; open = null; } html += '<div' + (al ? ' style="' + al + '"' : '') + '>' + inner + '</div>'; }
+    });
+    if (open) html += '</' + open + '>';
+    return Tx(role, box.x, box.y, box.w, box.h, fs, { html, color, align: oneAlign || 'left', bold: false, font, valign: anchor === 'ctr' ? 'middle' : anchor === 'b' ? 'bottom' : '', rot: box.rot });
+  }
+
+  /* ---- één vorm/plaatje/tabel ---- */
+  const SHAPES = { rect: 'rect', roundRect: 'round', snip1Rect: 'rect', snip2SameRect: 'rect', round1Rect: 'round', round2SameRect: 'round', ellipse: 'ellipse', triangle: 'triangle', rtTriangle: 'triangle', rightArrow: 'arrow', star5: 'star', star4: 'star', star6: 'star', line: 'line', straightConnector1: 'line' };
+  async function walk(spTree, layer, T, out, skipPh) {
+    for (let el of [...spTree.children]) {
+      if (el.localName === 'AlternateContent') { const fb = kid(el, 'Fallback') || kid(el, 'Choice'); if (!fb) continue; await walk(fb, layer, T, out, skipPh); continue; }
+      const ph = phOf(el);
+      if (ph && skipPh) continue;
+      if (ph && /^(dt|ftr|sldNum)$/.test(ph.type) && layer.kind === 'slide' && !all(el, 't').some(t => t.textContent.trim())) continue;
+      const chainEls = []; if (ph) { const l = findPh(layer.layout, ph); if (l) chainEls.push(l); const m = findPh(layer.master.x, l ? (phOf(l) || ph) : ph); if (m) chainEls.push(m); }
+      const xf = xfrmOf(el) || chainEls.map(xfrmOf).find(Boolean), ctx = layer.ctx, M = layer.master;
+      if (el.localName === 'grpSp') {
+        const g = xf; if (!g) continue; const off = kid(g, 'off'), ext = kid(g, 'ext'), co = kid(g, 'chOff'), ce = kid(g, 'chExt');
+        const t = { ox: num(off, 'x', 0), oy: num(off, 'y', 0), cx: num(co, 'x', 0), cy: num(co, 'y', 0), sx: num(ce, 'cx', 0) ? num(ext, 'cx', 0) / num(ce, 'cx', 1) : 1, sy: num(ce, 'cy', 0) ? num(ext, 'cy', 0) / num(ce, 'cy', 1) : 1 };
+        await walk(el, layer, [t].concat(T), out, skipPh); continue;
+      }
+      if (!xf) continue; const box = boxOf(xf, T); if (!box) continue;
+      if (el.localName === 'pic') {
+        const bf = kid(el, 'blipFill'), blip = kid(bf, 'blip'), sr = kid(bf, 'srcRect');
+        const crop = sr ? { l: num(sr, 'l', 0) / 100000, t: num(sr, 't', 0) / 100000, r: num(sr, 'r', 0) / 100000, b: num(sr, 'b', 0) / 100000 } : null;
+        if (kid(path(el, 'nvPicPr', 'nvPr') || el, 'videoFile') || kid(path(el, 'nvPicPr', 'nvPr') || el, 'audioFile')) report.skipped++;
+        const src = await imageFrom(layer.rs, rId(blip), crop); if (src) { const im = Im(box.x, box.y, box.w, box.h, src); im.rot = box.rot; out.push(im); }
+        continue;
+      }
+      if (el.localName === 'graphicFrame') {
+        const gd = path(el, 'graphic', 'graphicData'), uri = gd && gd.getAttribute('uri') || '';
+        const tbl = gd && kid(gd, 'tbl');
+        if (tbl) {
+          const rows = kids(tbl, 'tr').map(tr => kids(tr, 'tc').map(tc => kids(kid(tc, 'txBody'), 'p').map(p => all(p, 't').map(t => t.textContent).join('')).join('\n')));
+          if (rows.length && rows[0].length) { const r0 = all(tbl, 'rPr').find(r => r.hasAttribute('sz')), t = Tb(box.x, box.y, box.w, box.h, rows); t.head = path(tbl, 'tblPr') ? path(tbl, 'tblPr').getAttribute('firstRow') === '1' : true; t.fontSize = Math.max(10, Math.round((r0 ? +r0.getAttribute('sz') / 100 : 18) * PT)); out.push(t); }
+          continue;
+        }
+        if (/chart/.test(uri)) {
+          const ch = kid(gd, 'chart'), cp = ch && layer.rs[rId(ch)], cx = cp && await xml(cp.t);
+          const plot = cx && all(cx, 'plotArea')[0], kindEl = plot && [...plot.children].find(c => /Chart$/.test(c.localName));
+          const ser = kindEl && kid(kindEl, 'ser');
+          if (ser) {
+            const pts = n => { const o = []; all(n, 'pt').forEach(p => o[num(p, 'idx', 0)] = (kid(p, 'v') || {}).textContent); return o; };
+            const cats = pts(kid(ser, 'cat')), vals = pts(kid(ser, 'val'));
+            const data = vals.map((v, i) => ({ l: cats[i] != null ? String(cats[i]) : String(i + 1), v: +v || 0 })).filter(Boolean).slice(0, 24);
+            if (data.length) { const k = /pie|doughnut/i.test(kindEl.localName) ? 'pie' : /line|area|scatter/i.test(kindEl.localName) ? 'line' : 'bar'; out.push(Ch(box.x, box.y, box.w, box.h, k, data)); continue; }
+          }
+        }
+        report.skipped++; continue;
+      }
+      if (el.localName !== 'sp' && el.localName !== 'cxnSp') continue;
+      const spPr = kid(el, 'spPr'), style = kid(el, 'style'), geom = kid(spPr, 'prstGeom'), prst = geom ? geom.getAttribute('prst') : (kid(spPr, 'custGeom') ? 'cust' : null);
+      const refColor = n => { const r = kid(style, n); return r && (n === 'fontRef' || num(r, 'idx', 0) > 0) ? clr(r, ctx) : null; };
+      let fill = fillOf(spPr, ctx); if (fill === undefined) { fill = null; for (const c of chainEls) { const f = fillOf(kid(c, 'spPr'), ctx); if (f !== undefined) { fill = f; break; } } if (fill === null && !chainEls.length) fill = refColor('fillRef'); }
+      const ln = kid(spPr, 'ln'); let stroke = null, sw = 0;
+      if (ln && !kid(ln, 'noFill')) { stroke = clr(kid(ln, 'solidFill'), ctx) || refColor('lnRef'); sw = Math.max(1, Math.round(num(ln, 'w', 12700) * S)); }
+      else if (!ln && style && !ph) { stroke = refColor('lnRef'); sw = stroke ? Math.max(1, Math.round(12700 * S)) : 0; }
+      const isLine = el.localName === 'cxnSp' || prst === 'line' || /Connector/.test(prst || '');
+      if (isLine) {
+        if (!stroke) continue; const dx = box.w * (box.flipH ? -1 : 1), dy = (box.h - 0) * (box.flipV ? -1 : 1), len = Math.max(4, Math.round(Math.hypot(box.w, box.h))), cxp = box.x + box.w / 2, cyp = box.y + box.h / 2, hh = Math.max(12, sw + 6);
+        out.push(Sh('line', Math.round(cxp - len / 2), Math.round(cyp - hh / 2), len, hh, { fill: '', stroke, sw, rot: Math.round(Math.atan2(box.h < 5 ? 0 : dy, box.w < 5 ? 0.0001 : dx) * 180 / Math.PI) + box.rot }));
+        continue;
+      }
+      if (!ph && (fill || stroke)) { const kind = SHAPES[prst] || (prst ? 'rect' : null); if (kind) out.push(Sh(kind, box.x, box.y, box.w, box.h, { fill: fill || '', stroke: stroke || '', sw: stroke ? sw : 0, rot: box.rot })); }
+      else if (ph && (fill || (ln && stroke))) out.push(Sh('rect', box.x, box.y, box.w, box.h, { fill: fill || '', stroke: stroke || '', sw: stroke ? sw : 0, rot: box.rot }));
+      const tb = kid(el, 'txBody');
+      if (tb) {
+        const role = ph ? (ph.type === 'title' || ph.type === 'ctrTitle' ? 'title' : ph.type === 'subTitle' ? 'sub' : 'body') : 'body';
+        const txStyle = ph ? (role === 'title' ? M.title : /^(dt|ftr|sldNum)$/.test(ph.type) ? M.other : M.body) : M.other;
+        const lsts = chainEls.slice().reverse().map(c => kid(kid(c, 'txBody'), 'lstStyle')).filter(Boolean);
+        const bodyChain = chainEls.map(c => kid(kid(c, 'txBody'), 'bodyPr'));
+        const t = textEl(tb, box, { M, ctx, role: ph ? role : 'body', chain: { txStyle, lsts }, fontRefC: !ph ? refColor('fontRef') : null, bodyChain });
+        if (t) out.push(t);
+      }
+    }
+  }
+  async function bgOf(doc, ctx, rs) {
+    const bg = doc && path(doc.documentElement, 'cSld', 'bg'); if (!bg) return null;
+    const pr = kid(bg, 'bgPr'); if (pr) { const bf = kid(pr, 'blipFill'); if (bf) { const src = await imageFrom(rs, rId(kid(bf, 'blip'))); if (src) return { img: src }; } const f = fillOf(pr, ctx); if (f) return { color: f }; }
+    const ref = kid(bg, 'bgRef'); if (ref) { const c = clr(ref, ctx); if (c) return { color: c }; }
+    return null;
+  }
+
+  /* ---- alle dia's ---- */
+  const slides = [], ids = kids(path(presX.documentElement, 'sldIdLst'), 'sldId');
+  for (const sid of ids) {
+    const sp = presRels[rId(sid)]; if (!sp) continue;
+    const sx = await xml(sp.t); if (!sx) continue;
+    const srs = await rels(sp.t), lp = relOfType(srs, '/slideLayout'), lx = lp && await xml(lp), lrs = lp ? await rels(lp) : {};
+    const mp = lp && relOfType(lrs, '/slideMaster'), M = await masterCtx(mp || 'ppt/slideMasters/slideMaster1.xml'); M.rs = M.rs || {};
+    let ctx = M.ctx; const ov = lx && path(lx.documentElement, 'clrMapOvr', 'overrideClrMapping'); if (ov) { const map = {}; for (const a of ov.attributes) map[a.localName] = a.value; ctx = { scheme: M.ctx.scheme, map }; }
+    const s = newSlide('leeg'), els = [];
+    const bg = (await bgOf(sx, ctx, srs)) || (await bgOf(lx, ctx, lrs)) || (await bgOf(M.x, ctx, M.rs)) || { color: '#ffffff' };
+    if (bg.img) { s.bg = '#ffffff'; els.push(Im(Math.round(OX), Math.round(OY), Math.round(CX * S), Math.round(CY * S), bg.img)); } else s.bg = bg.color;
+    const show = d => !d || d.documentElement.getAttribute('showMasterSp') !== '0';
+    const base = { layout: lx, master: M, ctx };
+    if (show(sx) && show(lx)) await walk(tree(M.x), Object.assign({ kind: 'master', rs: M.rs }, base), [], els, true);
+    if (lx && show(sx)) await walk(tree(lx), Object.assign({ kind: 'layout', rs: lrs }, base), [], els, true);
+    await walk(tree(sx), Object.assign({ kind: 'slide', rs: srs }, base), [], els, false);
+    s.els = els;
+    const np = relOfType(srs, '/notesSlide'), nx = np && await xml(np);
+    if (nx) { const body = [...tree(nx).children].find(e => { const p = phOf(e); return p && p.type === 'body'; }); if (body) s.notes = kids(kid(body, 'txBody'), 'p').map(p => all(p, 't').map(t => t.textContent).join('')).join('\n').trim(); }
+    slides.push(s);
+  }
+  if (!slides.length) throw new Error('geen dia\'s');
+  const lum = h => { const [r, g, b] = hexRgb((h || '#ffffff').slice(1)); return (r * 299 + g * 587 + b * 114) / 1000; };
+  return { data: { theme: lum(slides[0].bg) < 128 ? 'donker' : 'licht', slides }, report };
+}
+async function importPptx(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (ext !== 'pptx') return alert(ext === 'ppt' ? 'Oude .ppt-bestanden kunnen niet worden geïmporteerd. Open het in PowerPoint en sla het op als .pptx.' : 'Kies een PowerPoint-bestand (.pptx).');
+  closeModals(); stopEdit(); setStatus('PowerPoint importeren...');
+  let res;
+  try { res = await readPptx(file); }
+  catch (e) { console.error(e); setStatus(''); return alert(/laden mislukt/i.test(e.message) ? 'Kon de PowerPoint-module niet laden. Ben je online?' : 'Dit bestand kon niet worden gelezen. Is het misschien beschadigd of beveiligd met een wachtwoord?'); }
+  await saveNow();
+  const size = JSON.stringify(res.data).length;
+  const { data: row, error } = await sb.from('presentations').insert({ title: file.name.replace(/\.[^.]+$/, '').slice(0, 120) || 'Geïmporteerde presentatie', data: res.data }).select(FIELDS).single();
+  if (error) { setStatus(''); return alert('Kon de presentatie niet opslaan' + (size > 15e6 ? ' (het bestand is erg groot door de afbeeldingen)' : '') + ': ' + error.message); }
+  items.unshift(row); view = 'list'; await openItem(row.id); document.body.classList.remove('side-open');
+  const n = res.data.slides.length;
+  toast(n + ' dia' + (n === 1 ? '' : "'s") + ' geïmporteerd' + (res.report.skipped ? ' (' + res.report.skipped + ' onderdeel' + (res.report.skipped === 1 ? '' : 'en') + ' zoals video of SmartArt overgeslagen)' : ''));
+}
+$('importBtn').onclick = () => $('importFile').click();
+$('tplImport').onclick = () => $('importFile').click();
+$('importFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importPptx(f); };
+let dragN = 0;
+const dropOk = e => currentUser && !readOnly && e.dataTransfer && [...e.dataTransfer.types].indexOf('Files') >= 0 && !$('app').classList.contains('hidden') && dragFrom < 0;
+const isPptxDrag = e => [...(e.dataTransfer.items || [])].some(i => i.kind === 'file' && /presentation|powerpoint/.test(i.type));
+document.addEventListener('dragenter', e => { if (!dropOk(e) || !isPptxDrag(e)) return; dragN++; if (!$('dropzone')) { const d = document.createElement('div'); d.id = 'dropzone'; d.className = 'dropzone'; d.textContent = 'Laat los om de PowerPoint te importeren'; document.body.append(d); } });
+document.addEventListener('dragleave', e => { if (!$('dropzone')) return; dragN = Math.max(0, dragN - 1); if (!dragN) $('dropzone').remove(); });
+document.addEventListener('dragover', e => { if (dropOk(e)) e.preventDefault(); });
+document.addEventListener('drop', e => {
+  dragN = 0; if ($('dropzone')) $('dropzone').remove();
+  if (!dropOk(e)) return; const f = e.dataTransfer.files[0]; if (!f) return; e.preventDefault();
+  if (/\.pptx?$/i.test(f.name)) importPptx(f);
+  else if (/^image\//.test(f.type) && pres) compressImage(f).then(r => addImage(r.src, r.w, r.h)).catch(() => alert('Deze afbeelding kon niet worden gelezen.'));
+});
+
 /* ============ PRESENTEREN ============ */
 let pIdx = 0, pActive = false, pEnded = false, pSpeaker = null, pStart = 0, pTick = null, pHide = null;
 function startPresent(from, speaker) {
@@ -1364,7 +1666,7 @@ async function buildPptx(skipUrl) {
     const ps = p.addSlide(); ps.background = { color: hx(s.bg || t.bg) }; if (s.notes) ps.addNotes(s.notes);
     s.els.forEach(e => {
       const base = { x: IN(e.x), y: IN(e.y), w: IN(e.w), h: IN(e.h) }; if (e.rot) base.rotate = e.rot;
-      if (e.type === 'text') { const runs = htmlRuns(e.html); if (!runs.length) return; ps.addText(runs, Object.assign({}, base, { fontSize: Math.round(e.fontSize * .75), fontFace: fontName(e.font || t.font), color: hx(e.color), bold: !!e.bold, italic: !!e.italic, underline: e.underline ? { style: 'sng' } : undefined, align: e.align || 'left', valign: 'top', margin: 6, fill: e.fill ? { color: hx(e.fill) } : undefined })); }
+      if (e.type === 'text') { const runs = htmlRuns(e.html); if (!runs.length) return; ps.addText(runs, Object.assign({}, base, { fontSize: Math.round(e.fontSize * .75), fontFace: fontName(e.font || t.font), color: hx(e.color), bold: !!e.bold, italic: !!e.italic, underline: e.underline ? { style: 'sng' } : undefined, align: e.align || 'left', valign: e.valign === 'middle' ? 'middle' : e.valign === 'bottom' ? 'bottom' : 'top', margin: 6, fill: e.fill ? { color: hx(e.fill) } : undefined })); }
       else if (e.type === 'shape') {
         const map = { rect: p.ShapeType.rect, round: p.ShapeType.roundRect, ellipse: p.ShapeType.ellipse, triangle: p.ShapeType.triangle, arrow: p.ShapeType.rightArrow, star: p.ShapeType.star5, line: p.ShapeType.line };
         const o = Object.assign({}, base);
